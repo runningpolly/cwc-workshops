@@ -35,6 +35,14 @@ Opening `index.html` directly in a browser also works.
 
 ## Shared online version
 
-`shared-page.html` is the version published as a private claude.ai page. It
-saves recipes and the weekly menu in the page's shared storage, so everyone
-the page is shared with sees the same data.
+`shared-page.html` is the version published as a private claude.ai page. It is
+the one the family uses on iPhone, iPad and the web. It saves everything in
+the page's shared storage, so every device sees the same data.
+
+- **Today**: today's meals, or tomorrow's once today's are all done; a start-time
+  timeline, a prep checklist and a shared note for the day
+- **Recipes**: photos, tags, cooking time, servings, notes and a dated cooking
+  journal; Claude can fill in a recipe from a photo
+- **Plan**: the next two weeks, three meals a day; pick dishes or let it surprise you
+- **Fridge**: list what's at home to see matching recipes and get new ideas from Claude
+- **Shop**: ingredients for the next 3 or 7 days, minus what's already at home

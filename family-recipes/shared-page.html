@@ -1,501 +1,1425 @@
 <title>Family Recipe Book</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Layout: a sticky kitchen-shelf header with three tabs; recipe cards in a wrapping grid, a 7×3 meal grid, and a checklist. */
+/* Layout: sticker-style cards on a sky-blue table; bottom tab bar on phones, top tabs on wide screens. Sheets slide up for recipes, pickers and editors. */
 :root {
-  --bg: #f3f5f0;
+  --bg: #eef4ff;
   --surface: #ffffff;
-  --ink: #1d2721;
-  --muted: #5f6d64;
-  --line: #d9e0d6;
-  --accent: #2f6b4f;
-  --accent-ink: #ffffff;
-  --accent-soft: #e2eee6;
-  --danger: #b4372b;
-  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --ink: #1d2142;
+  --muted: #5d6390;
+  --line: #1d2142;
+  --soft-line: #d5ddf3;
+  --tomato: #ff5d4f;
+  --sun: #ffc93c;
+  --leaf: #22b573;
+  --grape: #7a5cff;
+  --sky: #4cb8ff;
+  --tomato-soft: #ffe3df;
+  --sun-soft: #fff1c7;
+  --leaf-soft: #d8f5e6;
+  --grape-soft: #e8e2ff;
+  --on-color: #1d2142;
+  --shadow: 3px 3px 0 var(--line);
+  --font-display: "Fredoka", "Avenir Next Rounded", "Trebuchet MS", system-ui, sans-serif;
+  --font-body: "Nunito", "Avenir Next", system-ui, sans-serif;
+  --nav-h: 68px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141a16; --surface: #1d2520; --ink: #e8eee9; --muted: #9aa89f; --line: #2e3a33;
-    --accent: #7cc49d; --accent-ink: #0f1a14; --accent-soft: #233a2d; --danger: #f08a7e;
+    --bg: #13152b; --surface: #1f2244; --ink: #f2f3ff; --muted: #a9addb; --line: #070818; --soft-line: #343867;
+    --tomato-soft: #4a2230; --sun-soft: #4a3d1c; --leaf-soft: #17402f; --grape-soft: #2f2860;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #141a16; --surface: #1d2520; --ink: #e8eee9; --muted: #9aa89f; --line: #2e3a33;
-  --accent: #7cc49d; --accent-ink: #0f1a14; --accent-soft: #233a2d; --danger: #f08a7e;
+  --bg: #13152b; --surface: #1f2244; --ink: #f2f3ff; --muted: #a9addb; --line: #070818; --soft-line: #343867;
+  --tomato-soft: #4a2230; --sun-soft: #4a3d1c; --leaf-soft: #17402f; --grape-soft: #2f2860;
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-body); }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
-
-header {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
-  background: var(--surface); border-bottom: 1px solid var(--line);
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-body);
+  background-image: radial-gradient(var(--soft-line) 1.2px, transparent 1.2px); background-size: 22px 22px;
 }
-.bar, main {
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+
+.wrap {
   max-width: 1080px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding-block: 14px; }
-h1 { margin: 0; font: 800 1.5rem/1.1 var(--font-display); letter-spacing: -0.01em; }
-h1 small { display: block; font: 400 0.8rem var(--font-body); color: var(--muted); letter-spacing: 0; }
-nav { display: flex; gap: 4px; margin-left: auto; }
-nav button { border-radius: 999px; }
-nav button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 
-main { padding-block: 20px 48px; }
-.tab[hidden] { display: none; }
-
-button {
-  font: 600 0.95rem var(--font-body); padding: 7px 14px; cursor: pointer;
-  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink);
+/* ---------- Header & nav ---------- */
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); }
+.topbar { display: flex; align-items: center; gap: 12px 20px; padding-block: 12px; flex-wrap: wrap; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-size: 24px;
+  background: var(--sun); border: 2px solid var(--line); box-shadow: var(--shadow); transform: rotate(-6deg);
 }
-button:hover { border-color: var(--accent); }
-button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-button.danger { color: var(--danger); }
+.logo h1 { font-size: 1.35rem; font-weight: 700; }
+.status { display: block; font: 600 0.78rem var(--font-body); color: var(--muted); }
+.status::before { content: "●"; margin-right: 5px; color: var(--leaf); }
+.status.local::before { color: var(--sun); }
+nav.tabs { display: flex; gap: 6px; margin-left: auto; }
+.tab-btn {
+  display: flex; align-items: center; gap: 6px; font: 600 0.95rem var(--font-display); color: var(--ink);
+  padding: 8px 14px; border-radius: 999px; border: 2px solid transparent; background: transparent; cursor: pointer; box-shadow: none;
+}
+.tab-btn .ico { font-size: 1.15rem; }
+.tab-btn[aria-selected="true"] { background: var(--surface); border-color: var(--line); box-shadow: var(--shadow); }
+
+@media (max-width: 759px) {
+  nav.tabs {
+    position: fixed; z-index: 25; left: 0; right: 0; bottom: 0; margin: 0; justify-content: space-around; gap: 0;
+    background: var(--surface); border-top: 2px solid var(--line);
+    padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  }
+  .tab-btn { flex-direction: column; gap: 0; font-size: 0.72rem; padding: 4px 6px; border-radius: 14px; flex: 1; }
+  .tab-btn .ico { font-size: 1.4rem; }
+  .tab-btn[aria-selected="true"] { background: var(--sun-soft); box-shadow: none; border-color: transparent; }
+  main { padding-bottom: calc(var(--nav-h) + 28px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+main { padding-block: 8px 48px; }
+.view[hidden] { display: none; }
+.view { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+
+/* ---------- Basics ---------- */
+button, .btn {
+  font: 700 0.95rem var(--font-body); color: var(--ink); cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 9px 16px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface);
+  box-shadow: var(--shadow); transition: transform .08s, box-shadow .08s;
+}
+button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--line); }
+button:disabled { opacity: .55; cursor: default; }
+button.primary { background: var(--tomato); color: #fff; }
+button.sun { background: var(--sun); color: var(--on-color); }
+button.leaf { background: var(--leaf); color: #fff; }
+button.grape { background: var(--grape); color: #fff; }
+button.ghost { box-shadow: none; border-color: transparent; background: transparent; padding: 6px 10px; }
+button.small { padding: 5px 10px; font-size: 0.85rem; border-radius: 11px; }
+button.danger { color: var(--tomato); }
+:focus-visible { outline: 3px solid var(--grape); outline-offset: 2px; }
 input, textarea, select {
-  font: inherit; width: 100%; padding: 8px 10px; color: var(--ink);
-  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  font: inherit; width: 100%; padding: 10px 12px; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--soft-line); border-radius: 14px;
 }
+input:focus, textarea:focus, select:focus { border-color: var(--grape); outline: none; }
+textarea { resize: vertical; }
 
-.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.toolbar input { flex: 1 1 220px; }
-.hint { color: var(--muted); margin: 0 0 16px; }
-
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
-.card {
-  text-align: left; display: grid; gap: 6px; padding: 16px; min-width: 0;
-  border-radius: 12px; background: var(--surface);
+.panel {
+  background: var(--surface); border: 2px solid var(--line); border-radius: 22px; box-shadow: 4px 4px 0 var(--line);
+  padding: 18px; min-width: 0;
 }
-.card h3 { margin: 0; font: 600 1.15rem/1.25 var(--font-display); text-wrap: balance; }
+.section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.section-head h2 { font-size: 1.45rem; }
+.muted { color: var(--muted); }
+.hint { color: var(--muted); font-size: 0.92rem; margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
-  justify-self: start; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-  padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  font: 700 0.78rem var(--font-body); padding: 3px 10px; border-radius: 999px; border: 2px solid var(--line);
+  background: var(--grape-soft); color: var(--ink); box-shadow: none; cursor: default;
 }
-.meta { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+button.chip { cursor: pointer; }
+button.chip[aria-pressed="true"] { background: var(--grape); color: #fff; }
+.chip.t0 { background: var(--sun-soft); } .chip.t1 { background: var(--leaf-soft); } .chip.t2 { background: var(--tomato-soft); } .chip.t3 { background: var(--grape-soft); }
+.time { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { text-align: center; padding: 26px 16px; color: var(--muted); border: 2px dashed var(--soft-line); border-radius: 20px; display: grid; gap: 10px; justify-items: center; }
+.empty .big { font-size: 2.4rem; }
 
-.empty { padding: 32px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
-.empty p { margin: 0 0 12px; }
+/* ---------- Today ---------- */
+.hero { display: grid; gap: 14px; background: var(--sun); color: var(--on-color); }
+.hero-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.hero h2 { font-size: clamp(1.6rem, 5vw, 2.3rem); flex: 1; min-width: 200px; }
+.hero .kicker { font: 800 0.75rem var(--font-body); letter-spacing: 0.12em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.day-arrows { display: flex; gap: 6px; }
+.day-arrows button { width: 42px; height: 42px; padding: 0; border-radius: 50%; font-size: 1.1rem; }
+.progress { height: 14px; border: 2px solid var(--line); border-radius: 999px; background: var(--surface); overflow: hidden; }
+.progress > span { display: block; height: 100%; background: var(--leaf); transition: width .3s; }
+.meals { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.meal {
+  display: grid; grid-template-rows: auto 1fr auto; gap: 10px; padding: 14px; border-radius: 20px;
+  background: var(--surface); color: var(--ink); border: 2px solid var(--line); box-shadow: var(--shadow); min-width: 0;
+}
+.meal.done { background: var(--leaf-soft); }
+.meal.done .meal-name { text-decoration: line-through; text-decoration-thickness: 3px; text-decoration-color: var(--leaf); }
+.meal-label { display: flex; justify-content: space-between; align-items: center; font: 800 0.75rem var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.meal-body { display: flex; gap: 12px; align-items: center; min-width: 0; cursor: pointer; background: none; border: 0; box-shadow: none; padding: 0; text-align: left; font: inherit; color: inherit; justify-content: flex-start; }
+.meal-body:active { transform: none; box-shadow: none; }
+.thumb {
+  flex: none; width: 64px; height: 64px; border-radius: 16px; border: 2px solid var(--line); object-fit: cover;
+  display: grid; place-items: center; font-size: 30px; background: var(--sun-soft); overflow: hidden;
+}
+.meal-name { font: 600 1.15rem/1.2 var(--font-display); }
+.meal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.get-ready { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.timeline { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.timeline li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: start; }
+.timeline .when { font: 700 0.95rem var(--font-display); background: var(--grape-soft); border-radius: 10px; padding: 3px 6px; text-align: center; font-variant-numeric: tabular-nums; }
+.checklist { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 2px; }
+.checklist label { display: flex; gap: 10px; align-items: baseline; padding: 6px 4px; border-radius: 10px; cursor: pointer; }
+.checklist input { width: 20px; height: 20px; flex: none; accent-color: var(--leaf); align-self: center; }
+.checklist .done > span:first-of-type { text-decoration: line-through; color: var(--muted); }
+.checklist .from { margin-left: auto; font-size: 0.75rem; max-width: 45%; color: var(--muted); text-align: right; }
+.upcoming { display: flex; gap: 12px; overflow-x: auto; padding: 4px 4px 10px; scroll-snap-type: x mandatory; }
+.up-card {
+  flex: 0 0 170px; scroll-snap-align: start; display: grid; gap: 6px; align-content: start; text-align: left; justify-content: stretch;
+  padding: 12px; border-radius: 18px; font-weight: 600;
+}
+.up-card .d { font: 700 1rem var(--font-display); }
+.up-card .m { font-size: 0.85rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.up-card .m b { color: var(--ink); font-weight: 700; }
 
-.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-table { width: 100%; min-width: 560px; border-collapse: collapse; }
-th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
-tr:last-child th, tr:last-child td { border-bottom: 0; }
-thead th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-tbody th { font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
+/* ---------- Recipes ---------- */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.toolbar input[type="search"] { flex: 1 1 220px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.rcard {
+  display: grid; grid-template-rows: auto 1fr; padding: 0; overflow: hidden; text-align: left; align-items: stretch; justify-content: stretch;
+  border-radius: 20px; background: var(--surface);
+}
+.rcard:nth-child(4n+1) { transform: rotate(-0.6deg); } .rcard:nth-child(4n+3) { transform: rotate(0.6deg); }
+.rcard:hover { transform: rotate(0) translateY(-2px); }
+.rcard .pic { aspect-ratio: 4 / 3; width: 100%; max-width: 100%; object-fit: cover; border-bottom: 2px solid var(--line); display: grid; place-items: center; font-size: 46px; }
+.rcard .body { padding: 10px 12px 12px; display: grid; gap: 6px; align-content: start; }
+.rcard h3 { font-size: 1.05rem; font-weight: 600; }
+.rcard .meta { font-size: 0.82rem; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.pic.c0 { background: var(--sun-soft); } .pic.c1 { background: var(--leaf-soft); } .pic.c2 { background: var(--tomato-soft); } .pic.c3 { background: var(--grape-soft); }
 
-.shop { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
-.shop li { border-bottom: 1px solid var(--line); }
-.shop li:last-child { border-bottom: 0; }
-.shop label { display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; cursor: pointer; }
-.shop input { width: auto; accent-color: var(--accent); }
-.shop .done .item { text-decoration: line-through; color: var(--muted); }
-.shop .for { margin-left: auto; text-align: right; }
+/* ---------- Plan ---------- */
+.plan-list { display: grid; gap: 14px; }
+.plan-day { display: grid; gap: 10px; padding: 14px; }
+.plan-day.today { background: var(--sun-soft); }
+.plan-day h3 { font-size: 1.15rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.plan-day h3 small { font: 600 0.85rem var(--font-body); color: var(--muted); }
+.slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 560px) { .slots { grid-template-columns: 1fr; } }
+.slot {
+  display: flex; align-items: center; gap: 8px; min-width: 0; text-align: left; justify-content: flex-start;
+  padding: 8px 10px; border-radius: 14px; box-shadow: none; border: 2px dashed var(--soft-line); background: var(--surface); font-weight: 600;
+}
+.slot.filled { border-style: solid; border-color: var(--line); }
+.slot.done { background: var(--leaf-soft); }
+.slot .e { font-size: 1.3rem; flex: none; }
+.slot .txt { min-width: 0; display: grid; }
+.slot .txt small { font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.slot .txt span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ---------- Fridge ---------- */
+.pantry-input { display: flex; gap: 8px; }
+.pantry-chips .chip { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; padding: 5px 6px 5px 12px; background: var(--leaf-soft); }
+.pantry-chips .chip button { border: 0; box-shadow: none; padding: 0 6px; background: transparent; font-size: 1rem; line-height: 1; border-radius: 50%; }
+.matches { display: grid; gap: 10px; }
+.match { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 18px; text-align: left; justify-content: flex-start; }
+.match .info { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.match .score { font: 700 1.1rem var(--font-display); background: var(--sun); border: 2px solid var(--line); border-radius: 12px; padding: 4px 8px; flex: none; }
+.ideas { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.idea { display: grid; gap: 8px; align-content: start; background: var(--grape-soft); }
+.idea h3 { font-size: 1.15rem; }
+.idea ul { margin: 0; padding-left: 1.2em; font-size: 0.92rem; }
+.loader { display: inline-flex; gap: 6px; align-items: center; font-weight: 700; }
+.loader i { width: 10px; height: 10px; border-radius: 50%; background: var(--tomato); animation: hop 0.9s infinite ease-in-out; }
+.loader i:nth-child(2) { background: var(--sun); animation-delay: .15s; } .loader i:nth-child(3) { background: var(--leaf); animation-delay: .3s; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+/* ---------- Sheets ---------- */
 dialog {
-  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 22px;
-  border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink);
+  width: min(680px, 100vw); max-width: 100vw; max-height: min(92vh, 100%); padding: 0; margin: auto auto 0;
+  border: 2px solid var(--line); border-bottom: 0; border-radius: 26px 26px 0 0; background: var(--surface); color: var(--ink);
+  overscroll-behavior: contain;
 }
-dialog::backdrop { background: rgb(10 20 14 / 0.45); }
-dialog h2 { margin: 0 0 4px; font: 800 1.5rem/1.2 var(--font-display); text-wrap: balance; }
-dialog h3 { margin: 18px 0 6px; font: 600 0.8rem var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
-dialog ul, dialog ol { margin: 0; padding-left: 1.3em; }
-dialog li { margin-bottom: 4px; }
-form { display: grid; gap: 12px; }
-form label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; }
-form label small { font-weight: 400; color: var(--muted); }
-.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+@media (min-width: 760px) { dialog { margin: auto; border-bottom: 2px solid var(--line); border-radius: 26px; box-shadow: 6px 6px 0 var(--line); } }
+dialog[open] { animation: up .22s ease-out; }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+dialog::backdrop { background: rgb(15 18 45 / 0.5); }
+.sheet { display: grid; gap: 14px; padding: 20px max(18px, env(safe-area-inset-left, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-right, 0px)); }
+.sheet-head { display: flex; align-items: flex-start; gap: 10px; }
+.sheet-head h2 { flex: 1; font-size: 1.6rem; }
+.close { width: 40px; height: 40px; padding: 0; border-radius: 50%; flex: none; }
+.gallery { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; }
+.gallery img, .gallery .ph { flex: 0 0 auto; height: 220px; max-width: 88%; border-radius: 18px; border: 2px solid var(--line); object-fit: cover; scroll-snap-align: start; background: var(--sun-soft); }
+.gallery .ph { width: 220px; display: grid; place-items: center; }
+.facts { display: flex; gap: 8px; flex-wrap: wrap; }
+.fact { background: var(--sun-soft); border: 2px solid var(--line); border-radius: 12px; padding: 4px 10px; font-weight: 700; font-size: 0.9rem; }
+.sheet h3 { font-size: 1.1rem; }
+.sheet ol { margin: 0; padding-left: 1.4em; display: grid; gap: 8px; }
+.notes-box { background: var(--sun-soft); border-radius: 16px; padding: 12px 14px; white-space: pre-wrap; }
+.journal { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.journal li { border-left: 4px solid var(--grape); padding: 2px 0 2px 10px; }
+.journal time { display: block; font-size: 0.78rem; font-weight: 800; color: var(--muted); }
+.journal-add { display: flex; gap: 8px; align-items: flex-end; }
+form.sheet label { display: grid; gap: 5px; font-weight: 700; font-size: 0.92rem; }
+form.sheet label small { font-weight: 600; color: var(--muted); }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.photo-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.photo-row figure { margin: 0; position: relative; }
+.photo-row img { width: 84px; height: 84px; object-fit: cover; border-radius: 14px; border: 2px solid var(--line); display: block; }
+.photo-row figure button { position: absolute; top: -8px; right: -8px; width: 28px; height: 28px; padding: 0; border-radius: 50%; font-size: 0.9rem; }
+.add-photo { width: 84px; height: 84px; border-radius: 14px; border: 2px dashed var(--muted); display: grid; place-items: center; text-align: center; font-size: 0.8rem; font-weight: 700; cursor: pointer; color: var(--muted); padding: 4px; }
+.ai-box { display: grid; gap: 8px; background: var(--grape-soft); border-radius: 16px; padding: 12px; }
+.sticky-actions { position: sticky; bottom: 0; background: var(--surface); padding-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; border-top: 2px solid var(--soft-line); }
 .spacer { flex: 1; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button[aria-pressed="true"] { background: var(--sun); }
+.date-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px 4px 8px; }
+.date-strip button { flex: none; display: grid; gap: 0; padding: 6px 10px; min-width: 64px; font-size: 0.8rem; }
+.date-strip button b { font: 700 1.2rem var(--font-display); }
+.date-strip button[aria-pressed="true"] { background: var(--tomato); color: #fff; }
+.picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.picker-grid .rcard { transform: none; }
+.picker-grid .rcard .pic { font-size: 34px; }
 
 .toast {
-  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 10px;
-  background: var(--ink); color: var(--bg); font-weight: 600; z-index: 20;
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 50; max-width: calc(100vw - 32px);
+  bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 18px; border-radius: 16px; background: var(--ink); color: var(--bg); font-weight: 700; border: 2px solid var(--line);
 }
-.status { font-size: 0.8rem; color: var(--muted); }
-@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s, transform .15s; } .card:hover { transform: translateY(-2px); } }
+@media (min-width: 760px) { .toast { bottom: 24px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } .rcard { transform: none !important; } }
 </style>
 
 <header>
-  <div class="bar">
-    <h1>Family Recipe Book <small id="status" class="status">Connecting…</small></h1>
-    <nav role="tablist">
-      <button role="tab" id="tab-btn-recipes" data-tab="recipes" aria-selected="true">Recipes</button>
-      <button role="tab" id="tab-btn-menu" data-tab="menu" aria-selected="false">Weekly menu</button>
-      <button role="tab" id="tab-btn-shopping" data-tab="shopping" aria-selected="false">Shopping list</button>
+  <div class="wrap topbar">
+    <div class="logo">
+      <div class="logo-mark" aria-hidden="true">🍲</div>
+      <div><h1>Family Recipe Book</h1><span id="status" class="status local">Connecting…</span></div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn" role="tab" id="tab-today" data-view="today" aria-selected="true"><span class="ico">🏠</span>Today</button>
+      <button class="tab-btn" role="tab" id="tab-recipes" data-view="recipes" aria-selected="false"><span class="ico">📖</span>Recipes</button>
+      <button class="tab-btn" role="tab" id="tab-plan" data-view="plan" aria-selected="false"><span class="ico">📅</span>Plan</button>
+      <button class="tab-btn" role="tab" id="tab-fridge" data-view="fridge" aria-selected="false"><span class="ico">🥕</span>Fridge</button>
+      <button class="tab-btn" role="tab" id="tab-shop" data-view="shop" aria-selected="false"><span class="ico">🛒</span>Shop</button>
     </nav>
   </div>
 </header>
 
-<main>
-  <section id="tab-recipes" class="tab">
-    <div class="toolbar">
-      <input id="search" type="search" placeholder="Search by name, ingredient or category" aria-label="Search recipes">
-      <button id="new-recipe" class="primary">+ New recipe</button>
+<main class="wrap">
+  <!-- TODAY -->
+  <section id="view-today" class="view">
+    <div class="panel hero">
+      <div class="hero-top">
+        <h2 id="focus-title"><span class="kicker" id="focus-kicker">Today</span><span id="focus-date">…</span></h2>
+        <div class="day-arrows">
+          <button id="day-prev" aria-label="Previous day">◀</button>
+          <button id="day-next" aria-label="Next day">▶</button>
+        </div>
+      </div>
+      <div>
+        <div class="progress" aria-hidden="true"><span id="focus-progress" style="width:0%"></span></div>
+        <p class="hint" id="focus-progress-text" style="color:inherit;margin-top:6px"></p>
+      </div>
+      <div class="meals" id="focus-meals"></div>
     </div>
-    <div id="recipe-list" class="cards"></div>
+
+    <div class="get-ready">
+      <div class="panel">
+        <h2 style="font-size:1.3rem">⏰ Get ready</h2>
+        <ul class="timeline" id="ready-timeline"></ul>
+      </div>
+      <div class="panel">
+        <h2 style="font-size:1.3rem">🧺 What to prepare</h2>
+        <ul class="checklist" id="ready-list"></ul>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2 style="font-size:1.3rem">📝 Notes for the family</h2>
+      <p class="hint" style="margin:4px 0 10px">Anything everyone should know for this day: defrost the chicken, Grandma's coming, eat early…</p>
+      <textarea id="day-note" rows="3" placeholder="Write a note for this day"></textarea>
+    </div>
+
+    <div>
+      <div class="section-head" style="margin-bottom:10px"><h2>Coming up</h2><button class="small" id="go-plan">Open the plan</button></div>
+      <div class="upcoming" id="upcoming"></div>
+    </div>
   </section>
 
-  <section id="tab-menu" class="tab" hidden>
-    <div class="toolbar">
-      <p class="hint" style="flex:1;margin:0">Pick a recipe for each meal. The shopping list fills itself in.</p>
-      <button id="clear-menu">Clear week</button>
+  <!-- RECIPES -->
+  <section id="view-recipes" class="view" hidden>
+    <div class="section-head">
+      <h2>Our recipes</h2>
+      <div class="toolbar">
+        <button class="grape" id="new-from-photo">📷 From a photo</button>
+        <button class="primary" id="new-recipe">＋ New recipe</button>
+      </div>
     </div>
-    <div class="table-wrap"><table id="menu-table"></table></div>
+    <input id="search" type="search" placeholder="Search dishes, ingredients, tags, notes…" aria-label="Search recipes">
+    <div class="chips" id="tag-filter"></div>
+    <div class="cards" id="recipe-grid"></div>
   </section>
 
-  <section id="tab-shopping" class="tab" hidden>
-    <p class="hint">Everything needed for this week's menu. Tick items off as you shop.</p>
-    <ul id="shopping-list" class="shop"></ul>
+  <!-- PLAN -->
+  <section id="view-plan" class="view" hidden>
+    <div class="section-head">
+      <h2>Meal plan</h2>
+      <p class="hint">Tap a meal to pick a dish. Tap a dish name to change it.</p>
+    </div>
+    <div class="plan-list" id="plan-list"></div>
+  </section>
+
+  <!-- FRIDGE -->
+  <section id="view-fridge" class="view" hidden>
+    <div class="panel" style="display:grid;gap:12px">
+      <h2>🥕 What's at home?</h2>
+      <p class="hint">Add what's in the fridge and cupboard. We'll find dishes you can make.</p>
+      <form class="pantry-input" id="pantry-form">
+        <input id="pantry-new" placeholder="e.g. cabbage, carrot, eggs" autocomplete="off">
+        <button class="leaf" type="submit">Add</button>
+      </form>
+      <div class="chips pantry-chips" id="pantry-chips"></div>
+      <div class="chips" id="pantry-quick"></div>
+    </div>
+
+    <div>
+      <div class="section-head" style="margin-bottom:10px"><h2>From our recipes</h2></div>
+      <div class="matches" id="matches"></div>
+    </div>
+
+    <div class="panel" style="display:grid;gap:12px" id="ideas-panel">
+      <div class="section-head">
+        <h2>✨ New ideas from Claude</h2>
+        <button class="grape" id="ask-ideas">Suggest dishes</button>
+      </div>
+      <p class="hint">Claude suggests dishes using what you have, including a few creative ones. Save the ones you like.</p>
+      <div id="ideas-status"></div>
+      <div class="ideas" id="ideas"></div>
+    </div>
+  </section>
+
+  <!-- SHOP -->
+  <section id="view-shop" class="view" hidden>
+    <div class="section-head">
+      <h2>🛒 Shopping list</h2>
+      <div class="seg" id="shop-range">
+        <button class="small" data-days="3" aria-pressed="false">Next 3 days</button>
+        <button class="small" data-days="7" aria-pressed="true">Next 7 days</button>
+      </div>
+    </div>
+    <p class="hint">Built from the planned meals. Things already in the fridge are listed separately.</p>
+    <div class="panel"><ul class="checklist" id="shop-list"></ul></div>
+    <div class="panel" id="have-panel"><h3>Already at home</h3><ul class="checklist" id="have-list"></ul></div>
   </section>
 </main>
 
-<dialog id="recipe-dialog">
-  <form id="recipe-form">
-    <h2 id="dialog-title">New recipe</h2>
-    <label>Name <input id="f-name" name="name" required></label>
-    <div class="row">
-      <label>Category <input id="f-category" name="category" list="categories" placeholder="Dinner"></label>
-      <label>Serves <input id="f-servings" name="servings" type="number" min="1"></label>
-      <label>Minutes <input id="f-time" name="time" type="number" min="0"></label>
+<!-- Recipe view -->
+<dialog id="view-dialog" aria-labelledby="v-title">
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="v-title"></h2><button class="close" data-close aria-label="Close">✕</button></div>
+    <div class="gallery" id="v-gallery"></div>
+    <div class="facts" id="v-facts"></div>
+    <div class="chips" id="v-tags"></div>
+    <div class="toolbar"><button class="primary" id="v-plan">📅 Plan it</button><button id="v-edit">✏️ Edit</button></div>
+    <div id="v-ingredients"></div>
+    <div id="v-steps"></div>
+    <div id="v-notes"></div>
+    <div>
+      <h3>📓 Cooking journal</h3>
+      <p class="hint" style="margin:2px 0 8px">Jot down what worked, what to change next time, who loved it.</p>
+      <ul class="journal" id="v-journal"></ul>
+      <form class="journal-add" id="journal-form" style="margin-top:10px">
+        <textarea id="journal-text" rows="2" placeholder="Less salt next time; kids asked for seconds"></textarea>
+        <button class="sun" type="submit">Add</button>
+      </form>
     </div>
-    <label>Ingredients <small>One per line, e.g. "2 cups flour"</small><textarea id="f-ingredients" name="ingredients" rows="6"></textarea></label>
-    <label>Steps <small>One per line</small><textarea id="f-steps" name="steps" rows="6"></textarea></label>
-    <label>Notes <textarea id="f-notes" name="notes" rows="2" placeholder="Grandma's tip, who loves it, what to serve with it"></textarea></label>
-    <div class="actions">
-      <button type="button" id="delete-recipe" class="danger">Delete</button>
+  </div>
+</dialog>
+
+<!-- Recipe editor -->
+<dialog id="edit-dialog" aria-labelledby="e-title">
+  <form class="sheet" id="edit-form">
+    <div class="sheet-head"><h2 id="e-title">New recipe</h2><button type="button" class="close" data-close aria-label="Close">✕</button></div>
+    <div>
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:6px">Photos <small class="muted">of the dish, a recipe card or a cookbook page</small></div>
+      <div class="photo-row" id="e-photos"></div>
+      <input type="file" id="e-file" accept="image/*" multiple hidden>
+    </div>
+    <div class="ai-box" id="e-ai" hidden>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="grape small" id="e-read">✨ Fill in from photo</button>
+        <span class="hint" id="e-ai-status">Claude reads the first photo and fills in the text fields.</span>
+      </div>
+    </div>
+    <label>Dish name <input id="e-name" required placeholder="Grandma's dumplings"></label>
+    <div class="row">
+      <label>Cooking time <small>(minutes)</small><input id="e-time" type="number" min="0" inputmode="numeric"></label>
+      <label>Serves <input id="e-servings" type="number" min="1" inputmode="numeric"></label>
+      <label>Emoji <input id="e-emoji" maxlength="4" placeholder="🥟"></label>
+    </div>
+    <label>Tags <small>comma separated</small><input id="e-tags" placeholder="Dinner, Quick, Kids love"></label>
+    <div class="chips" id="e-tag-suggest"></div>
+    <label>Ingredients <small>one per line</small><textarea id="e-ingredients" rows="6" placeholder="500 g pork mince&#10;1 small cabbage"></textarea></label>
+    <label>Steps <small>one per line</small><textarea id="e-steps" rows="6"></textarea></label>
+    <label>Notes <small>tips, variations, where it came from</small><textarea id="e-notes" rows="3"></textarea></label>
+    <div class="sticky-actions">
+      <button type="button" class="danger" id="e-delete">Delete</button>
       <span class="spacer"></span>
-      <button type="button" id="cancel-recipe">Cancel</button>
-      <button type="submit" class="primary">Save recipe</button>
+      <button type="button" data-close>Cancel</button>
+      <button type="submit" class="primary" id="e-save">Save recipe</button>
     </div>
   </form>
 </dialog>
 
-<dialog id="view-dialog">
-  <article id="view-body"></article>
-  <div class="actions">
-    <button type="button" id="edit-from-view">Edit</button>
-    <span class="spacer"></span>
-    <button type="button" id="close-view" class="primary">Close</button>
+<!-- Pick a dish for a slot -->
+<dialog id="pick-dialog" aria-labelledby="p-title">
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="p-title">Pick a dish</h2><button class="close" data-close aria-label="Close">✕</button></div>
+    <div class="toolbar">
+      <input id="p-search" type="search" placeholder="Search" aria-label="Search dishes">
+      <button class="sun" id="p-random">🎲 Surprise me</button>
+    </div>
+    <div class="chips" id="p-tags"></div>
+    <div class="picker-grid" id="p-grid"></div>
+    <div class="toolbar" id="p-current" hidden>
+      <button class="danger" id="p-clear">Remove dish from this meal</button>
+    </div>
   </div>
 </dialog>
 
-<dialog id="confirm-dialog">
-  <h2 id="confirm-text" style="font-size:1.2rem"></h2>
-  <div class="actions">
-    <span class="spacer"></span>
-    <button type="button" id="confirm-no">Cancel</button>
-    <button type="button" id="confirm-yes" class="primary">Yes</button>
+<!-- Plan a recipe on a day -->
+<dialog id="when-dialog" aria-labelledby="w-title">
+  <div class="sheet">
+    <div class="sheet-head"><h2 id="w-title">When?</h2><button class="close" data-close aria-label="Close">✕</button></div>
+    <div class="date-strip" id="w-dates"></div>
+    <div class="seg" id="w-meals"></div>
+    <p class="hint" id="w-note"></p>
+    <div class="sticky-actions"><span class="spacer"></span><button data-close>Cancel</button><button class="primary" id="w-save">Add to plan</button></div>
   </div>
 </dialog>
 
-<datalist id="categories"></datalist>
+<!-- Confirm -->
+<dialog id="confirm-dialog" aria-labelledby="c-text">
+  <div class="sheet">
+    <h2 id="c-text" style="font-size:1.25rem"></h2>
+    <div class="toolbar"><span class="spacer"></span><button id="c-no">Cancel</button><button class="primary" id="c-yes">Yes</button></div>
+  </div>
+</dialog>
+
 <div id="toast" class="toast" hidden></div>
 
 <script>
-const LOCAL_KEY = "family-recipes:v1";
-const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const MEALS = ["Breakfast", "Lunch", "Dinner"];
-const EXAMPLES = [
-  { name: "Fluffy Pancakes", category: "Breakfast", servings: 4, time: 20,
-    ingredients: ["2 cups flour", "2 eggs", "1.5 cups milk", "2 tbsp sugar", "2 tsp baking powder", "Pinch of salt", "Butter"],
-    steps: ["Whisk the dry ingredients together.", "Beat the eggs with the milk and stir into the dry mix until just combined.", "Cook ladlefuls in a buttered pan until bubbles form, flip, and cook 1 more minute."],
-    notes: "Example recipe. Edit or delete it." },
-  { name: "Tomato and Egg Stir-fry", category: "Dinner", servings: 3, time: 15,
-    ingredients: ["4 eggs", "3 tomatoes", "2 spring onions", "1 tsp sugar", "Salt", "Oil"],
-    steps: ["Beat the eggs with a pinch of salt and scramble softly; set aside.", "Stir-fry tomato wedges until juicy, then add sugar and salt.", "Return the eggs, toss, and finish with spring onion."],
-    notes: "Example recipe. Serve over rice." },
-  { name: "Chicken Noodle Soup", category: "Lunch", servings: 6, time: 60,
-    ingredients: ["1 whole chicken", "2 carrots", "2 celery stalks", "1 onion", "200 g egg noodles", "Salt", "Pepper"],
-    steps: ["Simmer the chicken with the onion in water for 40 minutes.", "Lift out the chicken, shred the meat, and return it to the pot.", "Add sliced carrots and celery and cook 10 minutes.", "Add the noodles, cook until tender, and season."],
-    notes: "Example recipe." },
+// ================= Constants =================
+const MEALS = [
+  { k: "breakfast", label: "Breakfast", emoji: "🍳", at: [8, 0] },
+  { k: "lunch", label: "Lunch", emoji: "🥪", at: [12, 30] },
+  { k: "dinner", label: "Dinner", emoji: "🍽️", at: [18, 30] },
 ];
+const TAG_SUGGESTIONS = ["Breakfast", "Lunch", "Dinner", "Quick", "Kids love", "Vegetarian", "Soup", "Noodles", "Rice", "Baking", "Weekend", "Healthy", "Spicy", "Party"];
+const QUICK_PANTRY = ["eggs", "rice", "tomato", "onion", "garlic", "potato", "carrot", "cabbage", "chicken", "pork", "tofu", "noodles", "milk", "cheese", "spinach", "mushroom"];
+const FOOD_EMOJI = ["🥘", "🍜", "🥗", "🍲", "🍛", "🥟", "🍝", "🥞", "🍰", "🥦", "🍗", "🐟"];
+const LOCAL_KEY = "family-recipes:v2";
+const PLAN_DAYS = 14;
 
-const state = { recipes: [], menu: {}, checked: {}, ready: false };
-let db = null;
-let editingId = null;
-let viewingId = null;
+// ================= State =================
+const state = {
+  recipes: {}, days: {}, pantry: [], checked: {},
+  ready: false, view: "today", focusOffset: null, tagFilter: null, pickTag: null, shopDays: 7,
+};
+let db = null, sample = null, canImages = false;
+const photoCache = new Map();
 
-const $ = (sel) => document.querySelector(sel);
-const lines = (text) => text.split("\n").map((s) => s.trim()).filter(Boolean);
+// ================= Helpers =================
+const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const findRecipe = (id) => state.recipes.find((r) => r.id === id);
-const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-const metaLine = (r) => [r.servings && `Serves ${r.servings}`, r.time && `${r.time} min`].filter(Boolean).join(" · ");
+const lines = (t) => String(t || "").split("\n").map((s) => s.replace(/^\s*(?:[-•*]|\d+[.)])\s+/, "").trim()).filter(Boolean);
+const pad = (n) => String(n).padStart(2, "0");
+const dkey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const fromKey = (k) => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+const todayKey = () => dkey(new Date());
+const newId = (p = "r") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const safeImg = (src) => (typeof src === "string" && /^data:image\/(jpeg|png|webp|gif);base64,/.test(src) ? src : "");
+const hash = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+const recipeEmoji = (r) => (r && r.emoji) || FOOD_EMOJI[hash(r?.name || "") % FOOD_EMOJI.length];
+const colorClass = (s) => "c" + (hash(s) % 4);
+const tagClass = (s) => "t" + (hash(s.toLowerCase()) % 4);
+const fmtTime = (m) => (!m ? "" : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`);
+const fmtClock = (h, m) => new Date(2000, 0, 1, h, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const recipeList = () => Object.values(state.recipes).sort((a, b) => a.name.localeCompare(b.name));
+const dayDoc = (k) => state.days[k] || { meals: {}, note: "" };
+const norm = (s) => s.toLowerCase().replace(/[^a-z0-9À-￿ ]+/g, " ").trim();
+
+function dayLabel(k) {
+  const diff = Math.round((fromKey(k) - fromKey(todayKey())) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  return fromKey(k).toLocaleDateString([], { weekday: "long" });
+}
+const dateText = (k) => fromKey(k).toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" });
 
 function toast(msg) {
   const t = $("#toast");
   t.textContent = msg;
   t.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => (t.hidden = true), 3500);
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => (t.hidden = true), 3200);
 }
 
-function ask(question, yesLabel = "Yes") {
+function ask(question, yes = "Yes") {
   return new Promise((resolve) => {
     const d = $("#confirm-dialog");
-    $("#confirm-text").textContent = question;
-    $("#confirm-yes").textContent = yesLabel;
-    const done = (v) => { d.close(); $("#confirm-yes").onclick = $("#confirm-no").onclick = null; resolve(v); };
-    $("#confirm-yes").onclick = () => done(true);
-    $("#confirm-no").onclick = () => done(false);
+    $("#c-text").textContent = question;
+    $("#c-yes").textContent = yes;
+    const done = (v) => { d.close(); resolve(v); };
+    $("#c-yes").onclick = () => done(true);
+    $("#c-no").onclick = () => done(false);
     d.showModal();
   });
 }
 
-// ---------- Storage: shared page database when available, this browser otherwise ----------
+document.addEventListener("click", (e) => {
+  const c = e.target.closest("[data-close]");
+  if (c) c.closest("dialog").close();
+});
+document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (e) => { if (e.target === d) d.close(); }));
+
+// ================= Storage =================
+// Shared page database when the viewer provides one; this browser's storage otherwise.
 function loadLocal() {
   try {
     const d = JSON.parse(localStorage.getItem(LOCAL_KEY));
-    if (d && Array.isArray(d.recipes)) Object.assign(state, { recipes: d.recipes, menu: d.menu || {}, checked: d.checked || {} });
+    if (d) Object.assign(state, { recipes: d.recipes || {}, days: d.days || {}, pantry: d.pantry || [], checked: d.checked || {} });
+    for (const [id, src] of Object.entries(d?.photos || {})) photoCache.set(id, src);
   } catch {}
 }
 function saveLocal() {
-  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ recipes: state.recipes, menu: state.menu, checked: state.checked })); } catch {}
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify({
+      recipes: state.recipes, days: state.days, pantry: state.pantry, checked: state.checked, photos: Object.fromEntries(photoCache),
+    }));
+  } catch { toast("This browser is out of space for photos."); }
 }
 
 function writeError(e) {
-  if (e && e.code === "invalid_argument") toast("You can view this recipe book but not change it. Ask the owner for Contributor access.");
-  else if (e && e.code === "quota_exceeded") toast("The recipe book is full. Delete some recipes to add more.");
+  if (e?.code === "invalid_argument") toast("You can look but not change things. Ask the owner for Contributor access.");
+  else if (e?.code === "quota_exceeded") toast("The recipe book is full. Remove some photos or recipes.");
   else toast("Couldn't save. Check your connection and try again.");
 }
 
-let planQueue = Promise.resolve();
-function savePlan() {
-  if (!db) { saveLocal(); return; }
-  const body = { menu: { ...state.menu }, checked: { ...state.checked } };
-  planQueue = planQueue.then(() => db.doc("plan/week").set(body)).catch(writeError);
+const queues = new Map();
+function write(path, fn) {
+  const prev = queues.get(path) || Promise.resolve();
+  const next = prev.then(fn).catch((e) => { writeError(e); throw e; });
+  queues.set(path, next.catch(() => {}));
+  return next;
 }
 
-async function putRecipe(recipe) {
+async function putDoc(col, id, data) {
   if (!db) {
-    const i = state.recipes.findIndex((r) => r.id === recipe.id);
-    if (i >= 0) state.recipes[i] = recipe; else state.recipes.push(recipe);
+    if (col === "recipes") state.recipes[id] = { id, ...data };
+    if (col === "days") state.days[id] = data;
+    if (col === "lists" && id === "pantry") state.pantry = data.items;
+    if (col === "lists" && id === "shopping") state.checked = data.checked;
+    if (col === "photos") photoCache.set(id, data.src);
     saveLocal();
     render();
     return;
   }
-  const { id, ...body } = recipe;
-  await db.collection("recipes").doc(id).set(body);
+  return write(`${col}/${id}`, () => db.collection(col).doc(id).set(data));
 }
 
-async function removeRecipe(id) {
-  for (const key of Object.keys(state.menu)) if (state.menu[key] === id) delete state.menu[key];
+async function delDoc(col, id) {
   if (!db) {
-    state.recipes = state.recipes.filter((r) => r.id !== id);
+    if (col === "recipes") delete state.recipes[id];
+    if (col === "photos") photoCache.delete(id);
     saveLocal();
     render();
     return;
   }
-  await db.collection("recipes").doc(id).delete();
-  savePlan();
+  return write(`${col}/${id}`, () => db.collection(col).doc(id).delete());
 }
+
+async function getPhoto(id) {
+  if (photoCache.has(id)) return photoCache.get(id);
+  if (!db) return "";
+  try {
+    const snap = await db.collection("photos").doc(id).get();
+    const src = safeImg(snap.data()?.src);
+    photoCache.set(id, src);
+    return src;
+  } catch { return ""; }
+}
+
+function saveDay(k) {
+  const d = dayDoc(k);
+  state.days[k] = d;
+  return putDoc("days", k, { meals: d.meals || {}, note: d.note || "" });
+}
+const savePantry = () => putDoc("lists", "pantry", { items: state.pantry });
+const saveChecked = () => putDoc("lists", "shopping", { checked: state.checked });
 
 async function connect() {
-  try { db = window.claude?.use ? await window.claude.use("db") : null; } catch { db = null; }
+  const use = (n) => (window.claude?.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+  [db, sample] = await Promise.all([use("db"), use("sample")]);
+  if (sample) {
+    try { canImages = !!(await sample.limits())?.images; } catch { canImages = false; }
+  }
+  $("#ideas-panel").hidden = !sample;
+  const status = $("#status");
   if (!db) {
     loadLocal();
     state.ready = true;
-    $("#status").textContent = "Saved in this browser only";
+    status.textContent = "Saved on this device only";
+    status.className = "status local";
     render();
     return;
   }
-  $("#status").textContent = "Shared with everyone who has this link";
-  const fail = () => { $("#status").textContent = "Offline. Reload to reconnect."; };
-  db.collection("recipes").onSnapshot((snap) => {
-    state.recipes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  status.textContent = "Synced with the family";
+  status.className = "status";
+  const fail = () => { status.textContent = "Offline. Reopen to sync."; status.className = "status local"; };
+  db.collection("recipes").onSnapshot((s) => {
+    state.recipes = Object.fromEntries(s.docs.map((d) => [d.id, { id: d.id, ...d.data() }]));
     state.ready = true;
     render();
   }, fail);
-  db.doc("plan/week").onSnapshot((snap) => {
-    const d = snap.data() || {};
-    state.menu = { ...(d.menu || {}) };
-    state.checked = { ...(d.checked || {}) };
+  db.collection("days").onSnapshot((s) => {
+    state.days = Object.fromEntries(s.docs.map((d) => [d.id, { meals: { ...(d.data().meals || {}) }, note: d.data().note || "" }]));
+    render();
+  }, fail);
+  db.collection("lists").onSnapshot((s) => {
+    for (const d of s.docs) {
+      if (d.id === "pantry") state.pantry = [...(d.data().items || [])];
+      if (d.id === "shopping") state.checked = { ...(d.data().checked || {}) };
+    }
     render();
   }, fail);
 }
 
-// ---------- Tabs ----------
-function showTab(name) {
-  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
-  document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== `tab-${name}`));
+// ================= Images =================
+function loadImage(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error("That file isn't an image we can read.")); };
+    img.src = url;
+  });
 }
-document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+function shrink(img, maxSide, quality) {
+  const s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth * s);
+  c.height = Math.round(img.naturalHeight * s);
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", quality);
+}
+async function processPhoto(file) {
+  const img = await loadImage(file);
+  let side = 1400, q = 0.78, full = shrink(img, side, q);
+  while (full.length > 230000 && side > 500) { side -= 200; q = Math.max(0.55, q - 0.05); full = shrink(img, side, q); }
+  return { full, thumb: shrink(img, 360, 0.7) };
+}
+const dataUrlToBlob = async (u) => (await fetch(u)).blob();
 
-// ---------- Recipes ----------
-function renderRecipes() {
-  const list = $("#recipe-list");
-  if (!state.ready) { list.innerHTML = `<div class="empty" style="grid-column:1/-1"><p>Opening the recipe book…</p></div>`; return; }
-  if (!state.recipes.length) {
-    list.innerHTML = `<div class="empty" style="grid-column:1/-1">
-      <p>No recipes yet. Add your family's first recipe, or start with three examples you can edit.</p>
-      <button class="primary" id="empty-new">+ New recipe</button> <button id="add-examples">Add example recipes</button></div>`;
-    $("#empty-new").onclick = () => openEditor();
-    $("#add-examples").onclick = addExamples;
-    return;
+// ================= Navigation =================
+function showView(v) {
+  state.view = v;
+  document.querySelectorAll(".tab-btn").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  document.querySelectorAll(".view").forEach((s) => (s.hidden = s.id !== `view-${v}`));
+  window.scrollTo({ top: 0 });
+  render();
+}
+document.querySelectorAll(".tab-btn").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
+$("#go-plan").addEventListener("click", () => showView("plan"));
+
+// ================= Today =================
+function plannedMeals(k) {
+  const meals = dayDoc(k).meals || {};
+  return MEALS.filter((m) => meals[m.k]?.recipeId && state.recipes[meals[m.k].recipeId]);
+}
+function autoFocusOffset() {
+  const t = todayKey();
+  const planned = plannedMeals(t);
+  const meals = dayDoc(t).meals || {};
+  const allDone = planned.length > 0 && planned.every((m) => meals[m.k].done);
+  return allDone ? 1 : 0;
+}
+const focusKey = () => dkey(addDays(new Date(), state.focusOffset ?? autoFocusOffset()));
+
+function mealCard(k, m) {
+  const slot = (dayDoc(k).meals || {})[m.k];
+  const r = slot && state.recipes[slot.recipeId];
+  if (!r) {
+    return `<div class="meal">
+      <div class="meal-label"><span>${m.emoji} ${m.label}</span></div>
+      <div class="muted" style="align-self:center">Nothing planned yet.</div>
+      <div class="meal-actions"><button class="sun small" data-pick="${k}|${m.k}">＋ Pick a dish</button></div>
+    </div>`;
   }
-  const q = $("#search").value.trim().toLowerCase();
-  const shown = state.recipes
-    .filter((r) => !q || [r.name, r.category, ...(r.ingredients || [])].join(" ").toLowerCase().includes(q))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  list.innerHTML = shown.length
-    ? shown.map((r) => `
-        <button class="card" data-id="${esc(r.id)}">
-          ${r.category ? `<span class="chip">${esc(r.category)}</span>` : ""}
-          <h3>${esc(r.name)}</h3>
-          <span class="meta">${esc(metaLine(r) || `${(r.ingredients || []).length} ingredients`)}</span>
-        </button>`).join("")
-    : `<div class="empty" style="grid-column:1/-1"><p>No recipes match “${esc(q)}”.</p></div>`;
-  $("#categories").innerHTML = [...new Set(state.recipes.map((r) => r.category).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join("");
+  const img = safeImg(r.thumb);
+  return `<div class="meal ${slot.done ? "done" : ""}">
+    <div class="meal-label"><span>${m.emoji} ${m.label}</span>${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}</div>
+    <button class="meal-body" data-open="${esc(r.id)}">
+      ${img ? `<img class="thumb" src="${img}" alt="">` : `<span class="thumb ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
+      <span class="meal-name">${esc(r.name)}</span>
+    </button>
+    <div class="meal-actions">
+      <button class="${slot.done ? "" : "leaf"} small" data-done="${k}|${m.k}">${slot.done ? "↺ Not done" : "✓ Done"}</button>
+      <button class="small" data-pick="${k}|${m.k}">🔄 Swap</button>
+    </div>
+  </div>`;
 }
 
-async function addExamples() {
-  try { for (const r of EXAMPLES) await putRecipe({ id: newId(), ...r }); toast("Added 3 example recipes"); }
-  catch (e) { writeError(e); }
+function renderToday() {
+  const k = focusKey();
+  const day = dayDoc(k);
+  $("#focus-kicker").textContent = dayLabel(k) + (state.focusOffset == null && autoFocusOffset() === 1 ? " · today's meals are all done 🎉" : "");
+  $("#focus-date").textContent = fromKey(k).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" });
+  const planned = plannedMeals(k);
+  const done = planned.filter((m) => day.meals[m.k].done).length;
+  $("#focus-progress").style.width = planned.length ? `${(done / planned.length) * 100}%` : "0%";
+  $("#focus-progress-text").textContent = !state.ready ? "Opening the recipe book…"
+    : planned.length ? `${done} of ${planned.length} meals done` : "No meals planned for this day yet. Pick some dishes below.";
+  $("#focus-meals").innerHTML = MEALS.map((m) => mealCard(k, m)).join("");
+
+  // Timeline: when to start each planned meal.
+  const tl = planned.map((m) => {
+    const r = state.recipes[day.meals[m.k].recipeId];
+    const t = r.time || 0;
+    const start = new Date(2000, 0, 1, m.at[0], m.at[1] - t);
+    return `<li><span class="when">${t ? fmtClock(start.getHours(), start.getMinutes()) : fmtClock(...m.at)}</span>
+      <span><b>${t ? "Start" : "Serve"} ${esc(r.name)}</b><br><span class="muted">${m.label} at ${fmtClock(...m.at)}${t ? ` · takes ${fmtTime(t)}` : " · no cooking time saved"}</span></span></li>`;
+  });
+  const total = planned.reduce((s, m) => s + (state.recipes[day.meals[m.k].recipeId].time || 0), 0);
+  $("#ready-timeline").innerHTML = tl.length
+    ? tl.join("") + `<li><span class="when" style="background:var(--sun-soft)">Total</span><span><b>${fmtTime(total) || "—"}</b> <span class="muted">of cooking</span></span></li>`
+    : `<li class="muted" style="display:block">Plan a dish and its start time shows up here.</li>`;
+
+  // Prep list: combined ingredients for this day.
+  const items = gatherIngredients([k]);
+  const have = new Set(state.pantry.map(norm));
+  $("#ready-list").innerHTML = items.length
+    ? items.map(([key, it], i) => {
+        const inPantry = [...have].some((p) => p && key.includes(p));
+        const checked = state.checked[`${k}:${key}`];
+        return `<li class="${checked ? "done" : ""}"><label><input type="checkbox" id="prep-${i}" data-prep="${esc(`${k}:${key}`)}"${checked ? " checked" : ""}>
+          <span>${esc(it.text)}</span>${inPantry ? `<span class="chip t1">at home</span>` : ""}<span class="from">${[...it.recipes].map(esc).join(", ")}</span></label></li>`;
+      }).join("")
+    : `<li class="muted">Ingredients for the planned dishes show up here.</li>`;
+
+  const note = $("#day-note");
+  if (document.activeElement !== note) note.value = day.note || "";
+  note.dataset.day = k;
+
+  // Coming up: the next 7 days after the focus day.
+  const base = fromKey(k);
+  $("#upcoming").innerHTML = Array.from({ length: 7 }, (_, i) => dkey(addDays(base, i + 1))).map((dk) => {
+    const meals = dayDoc(dk).meals || {};
+    return `<button class="up-card" data-focus="${dk}">
+      <span class="d">${esc(dayLabel(dk))}</span><span class="muted" style="font-size:.8rem">${esc(dateText(dk))}</span>
+      ${MEALS.map((m) => { const r = state.recipes[meals[m.k]?.recipeId]; return `<span class="m">${m.emoji} ${r ? `<b>${esc(r.name)}</b>` : "–"}</span>`; }).join("")}
+    </button>`;
+  }).join("");
 }
 
-$("#search").addEventListener("input", renderRecipes);
-$("#new-recipe").addEventListener("click", () => openEditor());
-$("#recipe-list").addEventListener("click", (e) => {
-  const card = e.target.closest(".card");
-  if (card) openView(card.dataset.id);
-});
-
-function openEditor(id = null) {
-  editingId = id;
-  const r = id ? findRecipe(id) : null;
-  $("#recipe-form").reset();
-  $("#dialog-title").textContent = r ? "Edit recipe" : "New recipe";
-  $("#delete-recipe").hidden = !r;
-  if (r) {
-    $("#f-name").value = r.name;
-    $("#f-category").value = r.category || "";
-    $("#f-servings").value = r.servings || "";
-    $("#f-time").value = r.time || "";
-    $("#f-ingredients").value = (r.ingredients || []).join("\n");
-    $("#f-steps").value = (r.steps || []).join("\n");
-    $("#f-notes").value = r.notes || "";
-  }
-  $("#recipe-dialog").showModal();
-}
-
-$("#cancel-recipe").addEventListener("click", () => $("#recipe-dialog").close());
-$("#recipe-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const recipe = {
-    id: editingId || newId(),
-    name: $("#f-name").value.trim(),
-    category: $("#f-category").value.trim(),
-    servings: Number($("#f-servings").value) || null,
-    time: Number($("#f-time").value) || null,
-    ingredients: lines($("#f-ingredients").value),
-    steps: lines($("#f-steps").value),
-    notes: $("#f-notes").value.trim(),
-  };
-  try {
-    await putRecipe(recipe);
-    $("#recipe-dialog").close();
-    toast(`Saved “${recipe.name}”`);
-  } catch (err) { writeError(err); }
-});
-
-$("#delete-recipe").addEventListener("click", async () => {
-  const r = findRecipe(editingId);
-  if (!r) return;
-  $("#recipe-dialog").close();
-  if (!(await ask(`Delete “${r.name}”? This removes it for everyone.`, "Delete"))) { $("#recipe-dialog").showModal(); return; }
-  try { await removeRecipe(r.id); toast(`Deleted “${r.name}”`); } catch (err) { writeError(err); }
-});
-
-function openView(id) {
-  viewingId = id;
-  const r = findRecipe(id);
-  if (!r) return;
-  $("#view-body").innerHTML = `
-    ${r.category ? `<span class="chip">${esc(r.category)}</span>` : ""}
-    <h2>${esc(r.name)}</h2>
-    <div class="meta">${esc(metaLine(r))}</div>
-    <h3>Ingredients</h3>
-    <ul>${(r.ingredients || []).map((i) => `<li>${esc(i)}</li>`).join("") || "<li>None listed</li>"}</ul>
-    <h3>Steps</h3>
-    <ol>${(r.steps || []).map((s) => `<li>${esc(s)}</li>`).join("") || "<li>None listed</li>"}</ol>
-    ${r.notes ? `<h3>Notes</h3><p>${esc(r.notes)}</p>` : ""}`;
-  $("#view-dialog").showModal();
-}
-$("#close-view").addEventListener("click", () => $("#view-dialog").close());
-$("#edit-from-view").addEventListener("click", () => { $("#view-dialog").close(); openEditor(viewingId); });
-
-// ---------- Weekly menu ----------
-function renderMenu() {
-  const sorted = [...state.recipes].sort((a, b) => a.name.localeCompare(b.name));
-  const options = (selected) => `<option value="">–</option>` +
-    sorted.map((r) => `<option value="${esc(r.id)}"${r.id === selected ? " selected" : ""}>${esc(r.name)}</option>`).join("");
-  $("#menu-table").innerHTML =
-    `<thead><tr><th></th>${MEALS.map((m) => `<th>${m}</th>`).join("")}</tr></thead><tbody>` +
-    DAYS.map((d) => `<tr><th>${d}</th>${MEALS.map((m) =>
-      `<td><select id="slot-${d}-${m}" data-slot="${d}|${m}" aria-label="${d} ${m}">${options(state.menu[`${d}|${m}`])}</select></td>`).join("")}</tr>`).join("") +
-    `</tbody>`;
-}
-
-$("#menu-table").addEventListener("change", (e) => {
-  const slot = e.target.dataset.slot;
-  if (!slot) return;
-  if (e.target.value) state.menu[slot] = e.target.value; else delete state.menu[slot];
-  savePlan();
-  renderShopping();
-});
-
-$("#clear-menu").addEventListener("click", async () => {
-  if (!(await ask("Clear the whole week's menu and shopping list?", "Clear week"))) return;
-  state.menu = {};
-  state.checked = {};
-  savePlan();
+$("#day-prev").addEventListener("click", () => { state.focusOffset = (state.focusOffset ?? autoFocusOffset()) - 1; render(); });
+$("#day-next").addEventListener("click", () => { state.focusOffset = (state.focusOffset ?? autoFocusOffset()) + 1; render(); });
+$("#upcoming").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-focus]");
+  if (!b) return;
+  state.focusOffset = Math.round((fromKey(b.dataset.focus) - fromKey(todayKey())) / 86400000);
+  window.scrollTo({ top: 0, behavior: "smooth" });
   render();
 });
+let noteTimer;
+$("#day-note").addEventListener("input", (e) => {
+  const k = e.target.dataset.day;
+  const d = dayDoc(k);
+  d.note = e.target.value;
+  state.days[k] = d;
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => saveDay(k), 700);
+});
 
-// ---------- Shopping list ----------
-function renderShopping() {
-  const items = new Map();
-  for (const id of Object.values(state.menu)) {
-    const r = findRecipe(id);
-    if (!r) continue;
-    for (const ing of r.ingredients || []) {
-      const key = ing.toLowerCase();
-      const entry = items.get(key) || { text: ing, recipes: new Set() };
-      entry.recipes.add(r.name);
-      items.set(key, entry);
-    }
+// Shared click handling for meal cards, plan slots and upcoming cards.
+document.addEventListener("click", (e) => {
+  const open = e.target.closest("[data-open]");
+  if (open) return openRecipe(open.dataset.open);
+  const pick = e.target.closest("[data-pick]");
+  if (pick) { const [k, m] = pick.dataset.pick.split("|"); return openPicker(k, m); }
+  const done = e.target.closest("[data-done]");
+  if (done) {
+    const [k, m] = done.dataset.done.split("|");
+    const d = dayDoc(k);
+    d.meals[m] = { ...d.meals[m], done: !d.meals[m].done };
+    state.days[k] = d;
+    if (d.meals[m].done) toast(`Yum! ${state.recipes[d.meals[m].recipeId]?.name || "Meal"} marked done 🎉`);
+    saveDay(k);
+    render();
   }
-  $("#shopping-list").innerHTML = items.size
-    ? [...items.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, { text, recipes }], i) => `
-        <li class="${state.checked[key] ? "done" : ""}">
-          <label><input type="checkbox" id="shop-${i}" data-key="${esc(key)}"${state.checked[key] ? " checked" : ""}>
-          <span class="item">${esc(text)}</span><span class="meta for">${[...recipes].map(esc).join(", ")}</span></label>
-        </li>`).join("")
-    : `<li class="empty" style="border:0">Add recipes to the weekly menu and their ingredients will appear here.</li>`;
-}
-
-$("#shopping-list").addEventListener("change", (e) => {
-  const key = e.target.dataset.key;
+});
+document.addEventListener("change", (e) => {
+  const key = e.target.dataset.prep || e.target.dataset.shop;
   if (!key) return;
   if (e.target.checked) state.checked[key] = true; else delete state.checked[key];
   e.target.closest("li").classList.toggle("done", e.target.checked);
-  savePlan();
+  saveChecked();
 });
 
-function render() {
+function gatherIngredients(keys) {
+  const items = new Map();
+  for (const k of keys) {
+    const meals = dayDoc(k).meals || {};
+    for (const m of MEALS) {
+      const slot = meals[m.k];
+      const r = slot && state.recipes[slot.recipeId];
+      if (!r || slot.done) continue;
+      for (const ing of r.ingredients || []) {
+        const key = norm(ing);
+        const it = items.get(key) || { text: ing, recipes: new Set() };
+        it.recipes.add(r.name);
+        items.set(key, it);
+      }
+    }
+  }
+  return [...items.entries()].sort(([a], [b]) => a.localeCompare(b));
+}
+
+// ================= Recipes =================
+function allTags() {
+  const set = new Map();
+  for (const r of Object.values(state.recipes)) for (const t of r.tags || []) set.set(t.toLowerCase(), t);
+  return [...set.values()].sort((a, b) => a.localeCompare(b));
+}
+function matchesQuery(r, q) {
+  if (!q) return true;
+  return [r.name, ...(r.tags || []), ...(r.ingredients || []), r.notes, ...(r.journal || []).map((j) => j.text)].join(" ").toLowerCase().includes(q);
+}
+function recipeCard(r) {
+  const img = safeImg(r.thumb);
+  return `<button class="rcard" data-open="${esc(r.id)}">
+    ${img ? `<img class="pic" src="${img}" alt="">` : `<span class="pic ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
+    <span class="body">
+      <h3>${esc(r.name)}</h3>
+      <span class="meta">${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}${r.servings ? `<span>👪 ${r.servings}</span>` : ""}${(r.journal || []).length ? `<span>📓 ${r.journal.length}</span>` : ""}</span>
+      ${(r.tags || []).length ? `<span class="chips">${r.tags.slice(0, 3).map((t) => `<span class="chip ${tagClass(t)}">${esc(t)}</span>`).join("")}</span>` : ""}
+    </span>
+  </button>`;
+}
+function renderRecipes() {
+  const tags = allTags();
+  if (state.tagFilter && !tags.includes(state.tagFilter)) state.tagFilter = null;
+  $("#tag-filter").innerHTML = tags.length
+    ? [`<button class="chip" data-tag="" aria-pressed="${!state.tagFilter}">All</button>`, ...tags.map((t) => `<button class="chip ${tagClass(t)}" data-tag="${esc(t)}" aria-pressed="${state.tagFilter === t}">${esc(t)}</button>`)].join("")
+    : "";
+  const grid = $("#recipe-grid");
+  if (!state.ready) { grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><span class="loader"><i></i><i></i><i></i></span>Opening the recipe book…</div>`; return; }
+  const all = recipeList();
+  if (!all.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><span class="big">🍳</span>
+      <b>No recipes yet</b><span>Type one in, snap a photo of a recipe card, or start with three examples you can edit.</span>
+      <span class="toolbar" style="justify-content:center"><button class="primary" data-act="new">＋ New recipe</button><button data-act="examples">Add examples</button></span></div>`;
+    return;
+  }
+  const q = $("#search").value.trim().toLowerCase();
+  const shown = all.filter((r) => matchesQuery(r, q) && (!state.tagFilter || (r.tags || []).includes(state.tagFilter)));
+  grid.innerHTML = shown.length ? shown.map(recipeCard).join("") : `<div class="empty" style="grid-column:1/-1"><span class="big">🔍</span>No dishes match. Try another word or tag.</div>`;
+}
+$("#search").addEventListener("input", renderRecipes);
+$("#tag-filter").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tag]");
+  if (!b) return;
+  state.tagFilter = b.dataset.tag || null;
   renderRecipes();
-  renderMenu();
-  renderShopping();
+});
+$("#recipe-grid").addEventListener("click", (e) => {
+  const a = e.target.closest("[data-act]");
+  if (a?.dataset.act === "new") openEditor();
+  if (a?.dataset.act === "examples") addExamples();
+});
+$("#new-recipe").addEventListener("click", () => openEditor());
+$("#new-from-photo").addEventListener("click", () => { openEditor(); $("#e-file").click(); });
+
+const EXAMPLES = [
+  { name: "Fluffy Pancakes", emoji: "🥞", tags: ["Breakfast", "Kids love", "Example"], time: 20, servings: 4,
+    ingredients: ["2 cups flour", "2 eggs", "1.5 cups milk", "2 tbsp sugar", "2 tsp baking powder", "Butter"],
+    steps: ["Whisk the dry ingredients.", "Beat eggs with milk and stir in until just combined.", "Cook ladlefuls in a buttered pan; flip when bubbles form."],
+    notes: "Example recipe. Edit or delete it." },
+  { name: "Tomato and Egg Stir-fry", emoji: "🍅", tags: ["Dinner", "Quick", "Example"], time: 15, servings: 3,
+    ingredients: ["4 eggs", "3 tomatoes", "2 spring onions", "1 tsp sugar", "Salt", "Oil"],
+    steps: ["Scramble the eggs softly and set aside.", "Stir-fry tomato wedges until juicy; add sugar and salt.", "Return the eggs, toss, and finish with spring onion."],
+    notes: "Example recipe. Serve over rice." },
+  { name: "Cabbage and Carrot Stir-fry", emoji: "🥬", tags: ["Dinner", "Vegetarian", "Quick", "Example"], time: 15, servings: 4,
+    ingredients: ["Half a cabbage", "2 carrots", "3 cloves garlic", "1 tbsp soy sauce", "1 tsp vinegar", "Oil"],
+    steps: ["Slice the cabbage and cut the carrots into thin sticks.", "Fry the garlic until fragrant, then add the carrots for 2 minutes.", "Add the cabbage on high heat; season with soy sauce and vinegar."],
+    notes: "Example recipe." },
+];
+async function addExamples() {
+  try {
+    for (const r of EXAMPLES) { const id = newId(); await putDoc("recipes", id, { ...r, journal: [], photoIds: [], thumb: "", createdAt: Date.now() }); }
+    toast("Added 3 example recipes");
+  } catch {}
+}
+
+// ----- Recipe view -----
+let viewingId = null;
+function cookedHistory(id) {
+  return Object.entries(state.days).filter(([, d]) => Object.values(d.meals || {}).some((s) => s.recipeId === id && s.done)).map(([k]) => k).sort();
+}
+async function renderRecipeView() {
+  const r = state.recipes[viewingId];
+  if (!r) { $("#view-dialog").close(); return; }
+  $("#v-title").textContent = `${recipeEmoji(r)} ${r.name}`;
+  const cooked = cookedHistory(r.id);
+  $("#v-facts").innerHTML = [
+    r.time && `<span class="fact">⏱ ${fmtTime(r.time)}</span>`,
+    r.servings && `<span class="fact">👪 Serves ${r.servings}</span>`,
+    `<span class="fact">🍽 Cooked ${cooked.length} time${cooked.length === 1 ? "" : "s"}${cooked.length ? ` · last ${esc(dateText(cooked.at(-1)))}` : ""}</span>`,
+  ].filter(Boolean).join("");
+  $("#v-tags").innerHTML = (r.tags || []).map((t) => `<span class="chip ${tagClass(t)}">${esc(t)}</span>`).join("");
+  $("#v-ingredients").innerHTML = (r.ingredients || []).length
+    ? `<h3>🧺 Ingredients</h3><ul class="checklist">${r.ingredients.map((i, n) => `<li><label><input type="checkbox" id="vi-${n}"><span>${esc(i)}</span></label></li>`).join("")}</ul>` : "";
+  $("#v-steps").innerHTML = (r.steps || []).length ? `<h3>👩‍🍳 Steps</h3><ol>${r.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : "";
+  $("#v-notes").innerHTML = r.notes ? `<h3>💡 Notes</h3><div class="notes-box">${esc(r.notes)}</div>` : "";
+  $("#v-journal").innerHTML = (r.journal || []).length
+    ? [...r.journal].reverse().map((j) => `<li><time>${esc(new Date(j.at).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" }))}</time>${esc(j.text)}</li>`).join("")
+    : `<li class="muted" style="border:0;padding:0">No entries yet.</li>`;
+
+  const ids = r.photoIds || [];
+  const gallery = $("#v-gallery");
+  if (gallery.dataset.for !== r.id + ids.join()) {
+    gallery.dataset.for = r.id + ids.join();
+    gallery.innerHTML = ids.map((id) => `<span class="ph" data-photo="${esc(id)}"><span class="loader"><i></i><i></i><i></i></span></span>`).join("");
+    gallery.hidden = !ids.length;
+    for (const id of ids) {
+      const src = await getPhoto(id);
+      const ph = gallery.querySelector(`[data-photo="${CSS.escape(id)}"]`);
+      if (!ph) continue;
+      if (src) { const img = new Image(); img.src = src; img.alt = r.name; ph.replaceWith(img); }
+      else ph.textContent = "Photo unavailable";
+    }
+  }
+}
+function openRecipe(id) {
+  viewingId = id;
+  $("#journal-text").value = "";
+  $("#v-gallery").dataset.for = "";
+  renderRecipeView();
+  if (!$("#view-dialog").open) $("#view-dialog").showModal();
+}
+$("#v-edit").addEventListener("click", () => { $("#view-dialog").close(); openEditor(viewingId); });
+$("#v-plan").addEventListener("click", () => openWhen(viewingId));
+$("#journal-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const text = $("#journal-text").value.trim();
+  const r = state.recipes[viewingId];
+  if (!text || !r) return;
+  const { id, ...body } = r;
+  body.journal = [...(r.journal || []), { at: Date.now(), text }];
+  try { await putDoc("recipes", id, body); $("#journal-text").value = ""; toast("Added to the journal"); } catch {}
+});
+
+// ----- Editor -----
+let editingId = null, editPhotos = [], editThumb = "";
+function renderEditPhotos() {
+  $("#e-photos").innerHTML = editPhotos.map((p, i) => `<figure>${p.src ? `<img src="${safeImg(p.src)}" alt="Photo ${i + 1}">` : `<span class="add-photo">…</span>`}<button type="button" data-rm-photo="${i}" aria-label="Remove photo">✕</button></figure>`).join("")
+    + `<label class="add-photo" for="e-file">📷<br>Add photo</label>`;
+  $("#e-ai").hidden = !(canImages && editPhotos.some((p) => p.src));
+}
+async function openEditor(id = null) {
+  editingId = id;
+  const r = id ? state.recipes[id] : null;
+  $("#edit-form").reset();
+  $("#e-title").textContent = r ? "Edit recipe" : "New recipe";
+  $("#e-delete").hidden = !r;
+  $("#e-ai-status").textContent = "Claude reads the first photo and fills in the text fields.";
+  editThumb = r?.thumb || "";
+  editPhotos = (r?.photoIds || []).map((pid) => ({ id: pid, src: photoCache.get(pid) || "" }));
+  if (r) {
+    $("#e-name").value = r.name;
+    $("#e-time").value = r.time || "";
+    $("#e-servings").value = r.servings || "";
+    $("#e-emoji").value = r.emoji || "";
+    $("#e-tags").value = (r.tags || []).join(", ");
+    $("#e-ingredients").value = (r.ingredients || []).join("\n");
+    $("#e-steps").value = (r.steps || []).join("\n");
+    $("#e-notes").value = r.notes || "";
+  }
+  renderEditPhotos();
+  renderTagSuggest();
+  $("#edit-dialog").showModal();
+  for (const p of editPhotos) if (!p.src) { p.src = await getPhoto(p.id); renderEditPhotos(); }
+}
+function renderTagSuggest() {
+  const current = $("#e-tags").value.split(",").map((t) => t.trim().toLowerCase());
+  const pool = [...new Set([...allTags(), ...TAG_SUGGESTIONS])].filter((t) => !current.includes(t.toLowerCase())).slice(0, 14);
+  $("#e-tag-suggest").innerHTML = pool.map((t) => `<button type="button" class="chip ${tagClass(t)}" data-add-tag="${esc(t)}">＋ ${esc(t)}</button>`).join("");
+}
+$("#e-tags").addEventListener("input", renderTagSuggest);
+$("#e-tag-suggest").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-add-tag]");
+  if (!b) return;
+  const cur = $("#e-tags").value.split(",").map((t) => t.trim()).filter(Boolean);
+  $("#e-tags").value = [...cur, b.dataset.addTag].join(", ");
+  renderTagSuggest();
+});
+$("#e-photos").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-rm-photo]");
+  if (!b) return;
+  editPhotos.splice(Number(b.dataset.rmPhoto), 1);
+  renderEditPhotos();
+});
+$("#e-file").addEventListener("change", async (e) => {
+  const files = [...e.target.files];
+  e.target.value = "";
+  for (const f of files) {
+    try {
+      const { full, thumb } = await processPhoto(f);
+      editPhotos.push({ id: null, src: full, thumb });
+      renderEditPhotos();
+    } catch (err) { toast(err.message); }
+  }
+});
+
+const AI_ERR = { not_granted: "Claude isn't allowed on this page. You can allow it from the page's permissions.", rate_limited: "Claude is busy. Try again in a minute." };
+$("#e-read").addEventListener("click", async () => {
+  const first = editPhotos.find((p) => p.src);
+  if (!sample || !first) return;
+  const btn = $("#e-read"), status = $("#e-ai-status");
+  btn.disabled = true;
+  status.innerHTML = `<span class="loader"><i></i><i></i><i></i> Reading the photo…</span>`;
+  try {
+    const blob = await dataUrlToBlob(first.src);
+    const r = await sample.json(
+      `This photo is from a family's recipe collection. It may be a recipe card, a cookbook page, handwritten notes, a screenshot, or just a photo of a finished dish.
+Extract the recipe. If there is no written recipe, recognise the dish and write a sensible home-style recipe for it.
+Keep the original language of any written text.
+Reply with only JSON in this shape:
+{"name": "...", "emoji": "one food emoji", "timeMinutes": 30, "servings": 4, "tags": ["Dinner", "Quick"], "ingredients": ["500 g pork mince", "..."], "steps": ["...", "..."], "notes": "anything else written on the page, or a tip"}`,
+      { images: [blob], modelTier: "default" },
+    );
+    const fill = (sel, v) => { if (v && !$(sel).value.trim()) $(sel).value = v; };
+    fill("#e-name", r.name);
+    fill("#e-emoji", r.emoji);
+    fill("#e-time", Number(r.timeMinutes) || "");
+    fill("#e-servings", Number(r.servings) || "");
+    fill("#e-tags", Array.isArray(r.tags) ? r.tags.join(", ") : "");
+    fill("#e-ingredients", Array.isArray(r.ingredients) ? r.ingredients.join("\n") : "");
+    fill("#e-steps", Array.isArray(r.steps) ? r.steps.join("\n") : "");
+    fill("#e-notes", r.notes);
+    renderTagSuggest();
+    status.textContent = "Filled in. Check it over and change anything before saving.";
+  } catch (err) {
+    status.textContent = AI_ERR[err?.code] || "Couldn't read that photo. Try a clearer one, or type the recipe in.";
+  } finally { btn.disabled = false; }
+});
+
+$("#edit-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("#e-save");
+  btn.disabled = true;
+  try {
+    const old = editingId ? state.recipes[editingId] : null;
+    const photoIds = [];
+    for (const p of editPhotos) {
+      if (p.id) { photoIds.push(p.id); continue; }
+      const pid = newId("p");
+      await putDoc("photos", pid, { src: p.src });
+      photoCache.set(pid, p.src);
+      p.id = pid;
+      photoIds.push(pid);
+    }
+    for (const pid of old?.photoIds || []) if (!photoIds.includes(pid)) delDoc("photos", pid).catch(() => {});
+    const first = editPhotos[0];
+    let thumb = "";
+    if (first) thumb = first.thumb || (old?.photoIds?.[0] === first.id && editThumb) || (first.src ? shrink(await loadImage(await dataUrlToBlob(first.src)), 360, 0.7) : "");
+    const body = {
+      name: $("#e-name").value.trim(),
+      emoji: $("#e-emoji").value.trim(),
+      time: Number($("#e-time").value) || null,
+      servings: Number($("#e-servings").value) || null,
+      tags: [...new Set($("#e-tags").value.split(",").map((t) => t.trim()).filter(Boolean))],
+      ingredients: lines($("#e-ingredients").value),
+      steps: lines($("#e-steps").value),
+      notes: $("#e-notes").value.trim(),
+      photoIds, thumb: safeImg(thumb),
+      journal: old?.journal || [],
+      createdAt: old?.createdAt || Date.now(),
+    };
+    const id = editingId || newId();
+    await putDoc("recipes", id, body);
+    $("#edit-dialog").close();
+    toast(`Saved “${body.name}” 🎉`);
+    if (state.view === "recipes" && !editingId) openRecipe(id);
+  } catch {} finally { btn.disabled = false; }
+});
+
+$("#e-delete").addEventListener("click", async () => {
+  const r = state.recipes[editingId];
+  if (!r) return;
+  $("#edit-dialog").close();
+  if (!(await ask(`Delete “${r.name}” for everyone? Its photos and journal go too.`, "Delete"))) { $("#edit-dialog").showModal(); return; }
+  try {
+    for (const [k, d] of Object.entries(state.days)) {
+      let changed = false;
+      for (const m of Object.keys(d.meals || {})) if (d.meals[m]?.recipeId === r.id) { delete d.meals[m]; changed = true; }
+      if (changed) saveDay(k);
+    }
+    for (const pid of r.photoIds || []) delDoc("photos", pid).catch(() => {});
+    await delDoc("recipes", r.id);
+    toast(`Deleted “${r.name}”`);
+  } catch {}
+});
+
+// ================= Picker (choose a dish for a slot) =================
+let pickTarget = null;
+function openPicker(k, mealK) {
+  pickTarget = { k, mealK };
+  const meal = MEALS.find((m) => m.k === mealK);
+  $("#p-title").textContent = `${meal.emoji} ${meal.label} · ${dayLabel(k)}`;
+  $("#p-search").value = "";
+  state.pickTag = null;
+  $("#p-current").hidden = !dayDoc(k).meals?.[mealK];
+  renderPicker();
+  $("#pick-dialog").showModal();
+}
+function renderPicker() {
+  const tags = allTags();
+  $("#p-tags").innerHTML = tags.map((t) => `<button class="chip ${tagClass(t)}" data-ptag="${esc(t)}" aria-pressed="${state.pickTag === t}">${esc(t)}</button>`).join("");
+  const q = $("#p-search").value.trim().toLowerCase();
+  const list = recipeList().filter((r) => matchesQuery(r, q) && (!state.pickTag || (r.tags || []).includes(state.pickTag)));
+  $("#p-grid").innerHTML = list.length
+    ? list.map((r) => recipeCard(r).replace('data-open=', 'data-choose=')).join("")
+    : `<div class="empty" style="grid-column:1/-1">${recipeList().length ? "No dishes match." : "Add some recipes first."}</div>`;
+}
+$("#p-search").addEventListener("input", renderPicker);
+$("#p-tags").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ptag]");
+  if (!b) return;
+  state.pickTag = state.pickTag === b.dataset.ptag ? null : b.dataset.ptag;
+  renderPicker();
+});
+function assign(k, mealK, recipeId) {
+  const d = dayDoc(k);
+  d.meals = { ...d.meals, [mealK]: { recipeId, done: false } };
+  state.days[k] = d;
+  saveDay(k);
+  render();
+}
+$("#p-grid").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-choose]");
+  if (!b || !pickTarget) return;
+  assign(pickTarget.k, pickTarget.mealK, b.dataset.choose);
+  $("#pick-dialog").close();
+  toast(`${state.recipes[b.dataset.choose].name} is on the menu 🎉`);
+});
+$("#p-random").addEventListener("click", () => {
+  const cards = [...$("#p-grid").querySelectorAll("[data-choose]")];
+  if (!cards.length) return;
+  const pick = cards[Math.floor(Math.random() * cards.length)];
+  pick.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  pick.focus();
+  pick.animate?.([{ transform: "scale(1)" }, { transform: "scale(1.08) rotate(-2deg)" }, { transform: "scale(1)" }], { duration: 450 });
+  toast(`How about ${state.recipes[pick.dataset.choose].name}? Tap it to choose.`);
+});
+$("#p-clear").addEventListener("click", () => {
+  const d = dayDoc(pickTarget.k);
+  delete d.meals[pickTarget.mealK];
+  state.days[pickTarget.k] = d;
+  saveDay(pickTarget.k);
+  $("#pick-dialog").close();
+  render();
+});
+
+// ================= When (plan a given recipe) =================
+let when = { recipeId: null, k: null, meal: "dinner" };
+function openWhen(recipeId) {
+  when = { recipeId, k: todayKey(), meal: "dinner" };
+  const r = state.recipes[recipeId];
+  $("#w-title").textContent = `When are we having ${r.name}?`;
+  renderWhen();
+  $("#when-dialog").showModal();
+}
+function renderWhen() {
+  $("#w-dates").innerHTML = Array.from({ length: PLAN_DAYS }, (_, i) => dkey(addDays(new Date(), i))).map((k) => {
+    const d = fromKey(k);
+    return `<button data-wdate="${k}" aria-pressed="${when.k === k}"><span>${i18nDay(k)}</span><b>${d.getDate()}</b></button>`;
+  }).join("");
+  $("#w-meals").innerHTML = MEALS.map((m) => `<button data-wmeal="${m.k}" aria-pressed="${when.meal === m.k}">${m.emoji} ${m.label}</button>`).join("");
+  const existing = state.recipes[dayDoc(when.k).meals?.[when.meal]?.recipeId];
+  $("#w-note").textContent = existing ? `This replaces ${existing.name}.` : "";
+}
+const i18nDay = (k) => { const l = dayLabel(k); return l === "Today" || l === "Tomorrow" ? l : fromKey(k).toLocaleDateString([], { weekday: "short" }); };
+$("#w-dates").addEventListener("click", (e) => { const b = e.target.closest("[data-wdate]"); if (b) { when.k = b.dataset.wdate; renderWhen(); } });
+$("#w-meals").addEventListener("click", (e) => { const b = e.target.closest("[data-wmeal]"); if (b) { when.meal = b.dataset.wmeal; renderWhen(); } });
+$("#w-save").addEventListener("click", () => {
+  assign(when.k, when.meal, when.recipeId);
+  $("#when-dialog").close();
+  toast(`Planned for ${dayLabel(when.k).toLowerCase()} 🎉`);
+});
+
+// ================= Plan =================
+function renderPlan() {
+  const start = addDays(new Date(), -1);
+  $("#plan-list").innerHTML = Array.from({ length: PLAN_DAYS + 1 }, (_, i) => dkey(addDays(start, i))).map((k) => {
+    const meals = dayDoc(k).meals || {};
+    return `<div class="panel plan-day ${k === todayKey() ? "today" : ""}">
+      <h3>${esc(dayLabel(k))} <small>${esc(dateText(k))}</small></h3>
+      <div class="slots">${MEALS.map((m) => {
+        const s = meals[m.k];
+        const r = s && state.recipes[s.recipeId];
+        return r
+          ? `<button class="slot filled ${s.done ? "done" : ""}" data-pick="${k}|${m.k}"><span class="e">${s.done ? "✅" : esc(recipeEmoji(r))}</span><span class="txt"><small>${m.label}</small><span>${esc(r.name)}</span></span></button>`
+          : `<button class="slot" data-pick="${k}|${m.k}"><span class="e">${m.emoji}</span><span class="txt"><small>${m.label}</small><span class="muted">＋ Pick a dish</span></span></button>`;
+      }).join("")}</div>
+    </div>`;
+  }).join("");
+}
+
+// ================= Fridge =================
+function renderFridge() {
+  $("#pantry-chips").innerHTML = state.pantry.length
+    ? state.pantry.map((p, i) => `<span class="chip">${esc(p)}<button data-rm-pantry="${i}" aria-label="Remove ${esc(p)}">✕</button></span>`).join("")
+    : `<span class="hint">Nothing added yet.</span>`;
+  const have = new Set(state.pantry.map((p) => p.toLowerCase()));
+  $("#pantry-quick").innerHTML = QUICK_PANTRY.filter((q) => !have.has(q)).map((q) => `<button class="chip t0" data-add-pantry="${q}">＋ ${q}</button>`).join("");
+
+  const pantry = state.pantry.map(norm).filter(Boolean);
+  const ranked = recipeList().map((r) => {
+    const ings = r.ingredients || [];
+    const usedPantry = pantry.filter((p) => ings.some((i) => norm(i).includes(p)) || norm(r.name).includes(p));
+    const missing = ings.filter((i) => !pantry.some((p) => norm(i).includes(p)));
+    return { r, usedPantry, missing, score: ings.length ? (ings.length - missing.length) / ings.length : 0 };
+  }).filter((x) => x.usedPantry.length).sort((a, b) => b.usedPantry.length - a.usedPantry.length || b.score - a.score);
+  $("#matches").innerHTML = !pantry.length
+    ? `<div class="empty"><span class="big">🥬</span>Add what's at home and matching family recipes appear here.</div>`
+    : ranked.length
+      ? ranked.slice(0, 12).map(({ r, usedPantry, missing, score }) => `
+        <div class="panel match">
+          <span class="score">${Math.round(score * 100)}%</span>
+          <span class="info">
+            <b style="font-family:var(--font-display);font-size:1.1rem">${esc(recipeEmoji(r))} ${esc(r.name)}</b>
+            <span class="hint">Uses ${usedPantry.map(esc).join(", ")}${missing.length ? ` · still need ${missing.slice(0, 4).map(esc).join(", ")}${missing.length > 4 ? "…" : ""}` : " · you have everything!"}</span>
+          </span>
+          <span class="toolbar"><button class="small" data-open="${esc(r.id)}">View</button><button class="small sun" data-plan="${esc(r.id)}">📅 Plan</button></span>
+        </div>`).join("")
+      : `<div class="empty">None of our recipes use these yet. Ask Claude for ideas below.</div>`;
+}
+$("#pantry-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const items = $("#pantry-new").value.split(/[,，、\n]/).map((s) => s.trim()).filter(Boolean);
+  if (!items.length) return;
+  const have = new Set(state.pantry.map((p) => p.toLowerCase()));
+  state.pantry = [...state.pantry, ...items.filter((i) => !have.has(i.toLowerCase()))];
+  $("#pantry-new").value = "";
+  savePantry();
+  render();
+});
+$("#view-fridge").addEventListener("click", (e) => {
+  const rm = e.target.closest("[data-rm-pantry]");
+  const add = e.target.closest("[data-add-pantry]");
+  const plan = e.target.closest("[data-plan]");
+  if (rm) { state.pantry.splice(Number(rm.dataset.rmPantry), 1); savePantry(); render(); }
+  if (add) { state.pantry = [...state.pantry, add.dataset.addPantry]; savePantry(); render(); }
+  if (plan) openWhen(plan.dataset.plan);
+  const save = e.target.closest("[data-save-idea]");
+  if (save) saveIdea(Number(save.dataset.saveIdea), save.dataset.thenPlan === "1");
+});
+
+let ideas = [], ideasCtl = null;
+$("#ask-ideas").addEventListener("click", async () => {
+  if (!sample) return;
+  if (!state.pantry.length) { toast("Add a few things from the fridge first."); return; }
+  const btn = $("#ask-ideas");
+  ideasCtl?.abort();
+  ideasCtl = new AbortController();
+  btn.disabled = true;
+  $("#ideas-status").innerHTML = `<span class="loader"><i></i><i></i><i></i> Claude is thinking up dishes…</span>`;
+  $("#ideas").innerHTML = "";
+  try {
+    const known = recipeList().map((r) => r.name).slice(0, 80).join("; ");
+    const res = await sample.json(
+      `A family wants to cook with what they have at home.
+At home: ${state.pantry.join(", ")}.
+Recipes the family already has (don't repeat these): ${known || "none yet"}.
+Suggest 4 home-cooked dishes that mainly use what's at home. Assume basic pantry staples (oil, salt, soy sauce, sugar, flour) are available. Make 3 practical family dishes and 1 more creative or surprising one.
+Reply with only a JSON array, each item shaped like:
+{"name": "...", "emoji": "one food emoji", "why": "one short sentence on why it fits", "creative": false, "timeMinutes": 20, "servings": 4, "tags": ["Dinner", "Quick"], "uses": ["cabbage", "carrot"], "extra": ["items they may need to buy"], "ingredients": ["..."], "steps": ["..."]}`,
+      { signal: ideasCtl.signal },
+    );
+    ideas = (Array.isArray(res) ? res : []).filter((x) => x && x.name).slice(0, 6);
+    $("#ideas-status").innerHTML = ideas.length ? "" : `<p class="hint">No ideas came back. Try again.</p>`;
+    renderIdeas();
+  } catch (err) {
+    if (err?.code !== "cancelled") $("#ideas-status").innerHTML = `<p class="hint">${esc(AI_ERR[err?.code] || "Couldn't get ideas right now. Try again.")}</p>`;
+  } finally { btn.disabled = false; }
+});
+function renderIdeas() {
+  $("#ideas").innerHTML = ideas.map((x, i) => `
+    <div class="panel idea">
+      ${x.creative ? `<span class="chip t2" style="justify-self:start">✨ Creative</span>` : ""}
+      <h3>${esc(x.emoji || "🍲")} ${esc(x.name)}</h3>
+      <p class="hint">${esc(x.why || "")}</p>
+      <div class="facts">${x.timeMinutes ? `<span class="fact">⏱ ${fmtTime(Number(x.timeMinutes))}</span>` : ""}${(x.extra || []).length ? `<span class="fact">🛒 ${(x.extra || []).map(esc).join(", ")}</span>` : ""}</div>
+      <details><summary style="cursor:pointer;font-weight:700">Ingredients and steps</summary>
+        <ul>${(x.ingredients || []).map((s) => `<li>${esc(s)}</li>`).join("")}</ul>
+        <ol style="padding-left:1.3em;margin-top:8px">${(x.steps || []).map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
+      </details>
+      <div class="toolbar"><button class="small sun" data-save-idea="${i}">💾 Save recipe</button><button class="small primary" data-save-idea="${i}" data-then-plan="1">📅 Save and plan</button></div>
+    </div>`).join("");
+}
+async function saveIdea(i, thenPlan) {
+  const x = ideas[i];
+  if (!x) return;
+  const id = newId();
+  const tags = [...new Set([...(Array.isArray(x.tags) ? x.tags : []), "Claude idea"])].map(String);
+  try {
+    await putDoc("recipes", id, {
+      name: String(x.name), emoji: String(x.emoji || ""), time: Number(x.timeMinutes) || null, servings: Number(x.servings) || null,
+      tags, ingredients: (x.ingredients || []).map(String), steps: (x.steps || []).map(String), notes: String(x.why || ""),
+      photoIds: [], thumb: "", journal: [], createdAt: Date.now(),
+    });
+    ideas.splice(i, 1);
+    renderIdeas();
+    toast(`Saved ${x.name} to our recipes`);
+    if (thenPlan) setTimeout(() => openWhen(id), 50);
+  } catch {}
+}
+
+// ================= Shop =================
+function renderShop() {
+  document.querySelectorAll("#shop-range button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === state.shopDays)));
+  const keys = Array.from({ length: state.shopDays }, (_, i) => dkey(addDays(new Date(), i)));
+  const items = gatherIngredients(keys);
+  const pantry = state.pantry.map(norm).filter(Boolean);
+  const need = [], have = [];
+  for (const it of items) (pantry.some((p) => it[0].includes(p)) ? have : need).push(it);
+  const row = ([key, it], i, pre) => {
+    const ck = `shop:${key}`;
+    return `<li class="${state.checked[ck] ? "done" : ""}"><label><input type="checkbox" id="${pre}-${i}" data-shop="${esc(ck)}"${state.checked[ck] ? " checked" : ""}>
+      <span>${esc(it.text)}</span><span class="from">${[...it.recipes].map(esc).join(", ")}</span></label></li>`;
+  };
+  $("#shop-list").innerHTML = need.length ? need.map((x, i) => row(x, i, "s")).join("")
+    : `<li class="muted">${items.length ? "You have everything at home 🎉" : "Plan some meals and their ingredients show up here."}</li>`;
+  $("#have-list").innerHTML = have.map((x, i) => row(x, i, "h")).join("");
+  $("#have-panel").hidden = !have.length;
+}
+$("#shop-range").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-days]");
+  if (b) { state.shopDays = Number(b.dataset.days); renderShop(); }
+});
+
+// ================= Render =================
+function render() {
+  if (state.view === "today") renderToday();
+  if (state.view === "recipes") renderRecipes();
+  if (state.view === "plan") renderPlan();
+  if (state.view === "fridge") renderFridge();
+  if (state.view === "shop") renderShop();
+  if ($("#view-dialog").open) renderRecipeView();
+  if ($("#pick-dialog").open) renderPicker();
 }
 
 render();
