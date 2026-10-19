@@ -39,9 +39,13 @@ Opening `index.html` directly in a browser also works.
 the one the family uses on iPhone, iPad and the web. It saves everything in
 the page's shared storage, so every device sees the same data.
 
-- **Today**: today's meals, or tomorrow's once today's are all done; a start-time
-  timeline, a prep checklist and a shared note for the day
-- **Recipes**: photos, tags, cooking time, servings, notes and a dated cooking
+- **中文 / EN**: the whole interface switches between Chinese and English; Claude
+  replies in the chosen language
+- **Today**: today's meals, or tomorrow's once today's are all done; meals that are
+  done or already past fold away by the clock; a start-time timeline, a prep
+  checklist and a shared note for the day, each collapsible
+- **Recipes**: large photos, a filter panel (tags, cooking time, photo, not cooked
+  yet, sort order), tags, cooking time, servings, notes and a dated cooking
   journal; Claude can fill in a recipe from a photo
 - **Plan**: the next two weeks, three meals a day; pick dishes or let it surprise you
 - **Fridge**: list what's at home to see matching recipes and get new ideas from Claude
