@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family Recipes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Family Recipes</h1>
+    <nav>
+      <button data-tab="recipes" class="active">Recipes</button>
+      <button data-tab="menu">Weekly Menu</button>
+      <button data-tab="shopping">Shopping List</button>
+    </nav>
+    <div class="io">
+      <button id="export-btn">Export</button>
+      <label class="button">Import<input type="file" id="import-file" accept="application/json" hidden></label>
+    </div>
+  </header>
+
+  <main>
+    <section id="tab-recipes" class="tab active">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search by name, ingredient or category">
+        <button id="new-recipe" class="primary">+ New recipe</button>
+      </div>
+      <div id="recipe-list" class="cards"></div>
+    </section>
+
+    <section id="tab-menu" class="tab">
+      <div class="toolbar">
+        <button id="clear-menu">Clear week</button>
+      </div>
+      <div class="table-wrap"><table id="menu-table"></table></div>
+    </section>
+
+    <section id="tab-shopping" class="tab">
+      <p class="hint">Ingredients from every recipe on this week's menu.</p>
+      <ul id="shopping-list"></ul>
+    </section>
+  </main>
+
+  <dialog id="recipe-dialog">
+    <form id="recipe-form" method="dialog">
+      <h2 id="dialog-title">New recipe</h2>
+      <label>Name <input name="name" required></label>
+      <div class="row">
+        <label>Category <input name="category" list="categories" placeholder="Dinner, Dessert…"></label>
+        <label>Servings <input name="servings" type="number" min="1"></label>
+        <label>Time (min) <input name="time" type="number" min="0"></label>
+      </div>
+      <label>Ingredients <small>(one per line)</small><textarea name="ingredients" rows="6"></textarea></label>
+      <label>Steps <small>(one per line)</small><textarea name="steps" rows="6"></textarea></label>
+      <label>Notes <textarea name="notes" rows="2" placeholder="Grandma's tip, who likes it…"></textarea></label>
+      <div class="actions">
+        <button type="button" id="delete-recipe" class="danger">Delete</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancel-recipe">Cancel</button>
+        <button type="submit" class="primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="view-dialog">
+    <article id="view-body"></article>
+    <div class="actions">
+      <button type="button" id="edit-from-view">Edit</button>
+      <span class="spacer"></span>
+      <button type="button" id="close-view" class="primary">Close</button>
+    </div>
+  </dialog>
+
+  <datalist id="categories"></datalist>
+  <script src="app.js"></script>
+</body>
+</html>

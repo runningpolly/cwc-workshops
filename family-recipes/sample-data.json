@@ -1,0 +1,36 @@
+{
+  "recipes": [
+    {
+      "id": "sample-pancakes",
+      "name": "Fluffy Pancakes",
+      "category": "Breakfast",
+      "servings": 4,
+      "time": 20,
+      "ingredients": ["2 cups flour", "2 eggs", "1.5 cups milk", "2 tbsp sugar", "2 tsp baking powder", "Pinch of salt", "Butter"],
+      "steps": ["Whisk dry ingredients together.", "Beat eggs with milk, then stir into the dry mix until just combined.", "Cook ladlefuls on a buttered pan until bubbles form, flip and cook 1 more minute."],
+      "notes": "Kids like them with blueberries."
+    },
+    {
+      "id": "sample-tomato-egg",
+      "name": "Tomato and Egg Stir-fry",
+      "category": "Dinner",
+      "servings": 3,
+      "time": 15,
+      "ingredients": ["4 eggs", "3 tomatoes", "2 spring onions", "1 tsp sugar", "Salt", "Oil"],
+      "steps": ["Beat eggs with a pinch of salt and scramble softly; set aside.", "Stir-fry tomato wedges until juicy, add sugar and salt.", "Return eggs, toss, and finish with spring onion."],
+      "notes": "Serve over rice."
+    },
+    {
+      "id": "sample-chicken-soup",
+      "name": "Chicken Noodle Soup",
+      "category": "Lunch",
+      "servings": 6,
+      "time": 60,
+      "ingredients": ["1 whole chicken", "2 carrots", "2 celery stalks", "1 onion", "200g egg noodles", "Salt", "Pepper"],
+      "steps": ["Simmer chicken with onion in water for 40 minutes.", "Remove chicken, shred meat, return to pot.", "Add sliced carrots and celery, cook 10 minutes.", "Add noodles and cook until tender. Season."],
+      "notes": ""
+    }
+  ],
+  "menu": {},
+  "checked": {}
+}
