@@ -32,3 +32,9 @@ Opening `index.html` directly in a browser also works.
 | `styles.css` | Styling |
 | `app.js` | Data storage and UI logic |
 | `sample-data.json` | Example recipes you can import to get started |
+
+## Shared online version
+
+`shared-page.html` is the version published as a private claude.ai page. It
+saves recipes and the weekly menu in the page's shared storage, so everyone
+the page is shared with sees the same data.

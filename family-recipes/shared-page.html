@@ -1,0 +1,503 @@
+<title>Family Recipe Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* Layout: a sticky kitchen-shelf header with three tabs; recipe cards in a wrapping grid, a 7×3 meal grid, and a checklist. */
+:root {
+  --bg: #f3f5f0;
+  --surface: #ffffff;
+  --ink: #1d2721;
+  --muted: #5f6d64;
+  --line: #d9e0d6;
+  --accent: #2f6b4f;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2eee6;
+  --danger: #b4372b;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a16; --surface: #1d2520; --ink: #e8eee9; --muted: #9aa89f; --line: #2e3a33;
+    --accent: #7cc49d; --accent-ink: #0f1a14; --accent-soft: #233a2d; --danger: #f08a7e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a16; --surface: #1d2520; --ink: #e8eee9; --muted: #9aa89f; --line: #2e3a33;
+  --accent: #7cc49d; --accent-ink: #0f1a14; --accent-soft: #233a2d; --danger: #f08a7e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--font-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+
+header {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+.bar, main {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding-block: 14px; }
+h1 { margin: 0; font: 800 1.5rem/1.1 var(--font-display); letter-spacing: -0.01em; }
+h1 small { display: block; font: 400 0.8rem var(--font-body); color: var(--muted); letter-spacing: 0; }
+nav { display: flex; gap: 4px; margin-left: auto; }
+nav button { border-radius: 999px; }
+nav button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+main { padding-block: 20px 48px; }
+.tab[hidden] { display: none; }
+
+button {
+  font: 600 0.95rem var(--font-body); padding: 7px 14px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink);
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.danger { color: var(--danger); }
+input, textarea, select {
+  font: inherit; width: 100%; padding: 8px 10px; color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+}
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.toolbar input { flex: 1 1 220px; }
+.hint { color: var(--muted); margin: 0 0 16px; }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.card {
+  text-align: left; display: grid; gap: 6px; padding: 16px; min-width: 0;
+  border-radius: 12px; background: var(--surface);
+}
+.card h3 { margin: 0; font: 600 1.15rem/1.25 var(--font-display); text-wrap: balance; }
+.chip {
+  justify-self: start; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+}
+.meta { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+.empty { padding: 32px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
+.empty p { margin: 0 0 12px; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { width: 100%; min-width: 560px; border-collapse: collapse; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+tr:last-child th, tr:last-child td { border-bottom: 0; }
+thead th { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+tbody th { font-family: var(--font-display); font-weight: 600; white-space: nowrap; }
+
+.shop { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.shop li { border-bottom: 1px solid var(--line); }
+.shop li:last-child { border-bottom: 0; }
+.shop label { display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; cursor: pointer; }
+.shop input { width: auto; accent-color: var(--accent); }
+.shop .done .item { text-decoration: line-through; color: var(--muted); }
+.shop .for { margin-left: auto; text-align: right; }
+
+dialog {
+  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 22px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink);
+}
+dialog::backdrop { background: rgb(10 20 14 / 0.45); }
+dialog h2 { margin: 0 0 4px; font: 800 1.5rem/1.2 var(--font-display); text-wrap: balance; }
+dialog h3 { margin: 18px 0 6px; font: 600 0.8rem var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+dialog ul, dialog ol { margin: 0; padding-left: 1.3em; }
+dialog li { margin-bottom: 4px; }
+form { display: grid; gap: 12px; }
+form label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; }
+form label small { font-weight: 400; color: var(--muted); }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.spacer { flex: 1; }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  max-width: calc(100vw - 32px); padding: 10px 16px; border-radius: 10px;
+  background: var(--ink); color: var(--bg); font-weight: 600; z-index: 20;
+}
+.status { font-size: 0.8rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .15s, transform .15s; } .card:hover { transform: translateY(-2px); } }
+</style>
+
+<header>
+  <div class="bar">
+    <h1>Family Recipe Book <small id="status" class="status">Connecting…</small></h1>
+    <nav role="tablist">
+      <button role="tab" id="tab-btn-recipes" data-tab="recipes" aria-selected="true">Recipes</button>
+      <button role="tab" id="tab-btn-menu" data-tab="menu" aria-selected="false">Weekly menu</button>
+      <button role="tab" id="tab-btn-shopping" data-tab="shopping" aria-selected="false">Shopping list</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section id="tab-recipes" class="tab">
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search by name, ingredient or category" aria-label="Search recipes">
+      <button id="new-recipe" class="primary">+ New recipe</button>
+    </div>
+    <div id="recipe-list" class="cards"></div>
+  </section>
+
+  <section id="tab-menu" class="tab" hidden>
+    <div class="toolbar">
+      <p class="hint" style="flex:1;margin:0">Pick a recipe for each meal. The shopping list fills itself in.</p>
+      <button id="clear-menu">Clear week</button>
+    </div>
+    <div class="table-wrap"><table id="menu-table"></table></div>
+  </section>
+
+  <section id="tab-shopping" class="tab" hidden>
+    <p class="hint">Everything needed for this week's menu. Tick items off as you shop.</p>
+    <ul id="shopping-list" class="shop"></ul>
+  </section>
+</main>
+
+<dialog id="recipe-dialog">
+  <form id="recipe-form">
+    <h2 id="dialog-title">New recipe</h2>
+    <label>Name <input id="f-name" name="name" required></label>
+    <div class="row">
+      <label>Category <input id="f-category" name="category" list="categories" placeholder="Dinner"></label>
+      <label>Serves <input id="f-servings" name="servings" type="number" min="1"></label>
+      <label>Minutes <input id="f-time" name="time" type="number" min="0"></label>
+    </div>
+    <label>Ingredients <small>One per line, e.g. "2 cups flour"</small><textarea id="f-ingredients" name="ingredients" rows="6"></textarea></label>
+    <label>Steps <small>One per line</small><textarea id="f-steps" name="steps" rows="6"></textarea></label>
+    <label>Notes <textarea id="f-notes" name="notes" rows="2" placeholder="Grandma's tip, who loves it, what to serve with it"></textarea></label>
+    <div class="actions">
+      <button type="button" id="delete-recipe" class="danger">Delete</button>
+      <span class="spacer"></span>
+      <button type="button" id="cancel-recipe">Cancel</button>
+      <button type="submit" class="primary">Save recipe</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="view-dialog">
+  <article id="view-body"></article>
+  <div class="actions">
+    <button type="button" id="edit-from-view">Edit</button>
+    <span class="spacer"></span>
+    <button type="button" id="close-view" class="primary">Close</button>
+  </div>
+</dialog>
+
+<dialog id="confirm-dialog">
+  <h2 id="confirm-text" style="font-size:1.2rem"></h2>
+  <div class="actions">
+    <span class="spacer"></span>
+    <button type="button" id="confirm-no">Cancel</button>
+    <button type="button" id="confirm-yes" class="primary">Yes</button>
+  </div>
+</dialog>
+
+<datalist id="categories"></datalist>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const LOCAL_KEY = "family-recipes:v1";
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const MEALS = ["Breakfast", "Lunch", "Dinner"];
+const EXAMPLES = [
+  { name: "Fluffy Pancakes", category: "Breakfast", servings: 4, time: 20,
+    ingredients: ["2 cups flour", "2 eggs", "1.5 cups milk", "2 tbsp sugar", "2 tsp baking powder", "Pinch of salt", "Butter"],
+    steps: ["Whisk the dry ingredients together.", "Beat the eggs with the milk and stir into the dry mix until just combined.", "Cook ladlefuls in a buttered pan until bubbles form, flip, and cook 1 more minute."],
+    notes: "Example recipe. Edit or delete it." },
+  { name: "Tomato and Egg Stir-fry", category: "Dinner", servings: 3, time: 15,
+    ingredients: ["4 eggs", "3 tomatoes", "2 spring onions", "1 tsp sugar", "Salt", "Oil"],
+    steps: ["Beat the eggs with a pinch of salt and scramble softly; set aside.", "Stir-fry tomato wedges until juicy, then add sugar and salt.", "Return the eggs, toss, and finish with spring onion."],
+    notes: "Example recipe. Serve over rice." },
+  { name: "Chicken Noodle Soup", category: "Lunch", servings: 6, time: 60,
+    ingredients: ["1 whole chicken", "2 carrots", "2 celery stalks", "1 onion", "200 g egg noodles", "Salt", "Pepper"],
+    steps: ["Simmer the chicken with the onion in water for 40 minutes.", "Lift out the chicken, shred the meat, and return it to the pot.", "Add sliced carrots and celery and cook 10 minutes.", "Add the noodles, cook until tender, and season."],
+    notes: "Example recipe." },
+];
+
+const state = { recipes: [], menu: {}, checked: {}, ready: false };
+let db = null;
+let editingId = null;
+let viewingId = null;
+
+const $ = (sel) => document.querySelector(sel);
+const lines = (text) => text.split("\n").map((s) => s.trim()).filter(Boolean);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const findRecipe = (id) => state.recipes.find((r) => r.id === id);
+const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const metaLine = (r) => [r.servings && `Serves ${r.servings}`, r.time && `${r.time} min`].filter(Boolean).join(" · ");
+
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => (t.hidden = true), 3500);
+}
+
+function ask(question, yesLabel = "Yes") {
+  return new Promise((resolve) => {
+    const d = $("#confirm-dialog");
+    $("#confirm-text").textContent = question;
+    $("#confirm-yes").textContent = yesLabel;
+    const done = (v) => { d.close(); $("#confirm-yes").onclick = $("#confirm-no").onclick = null; resolve(v); };
+    $("#confirm-yes").onclick = () => done(true);
+    $("#confirm-no").onclick = () => done(false);
+    d.showModal();
+  });
+}
+
+// ---------- Storage: shared page database when available, this browser otherwise ----------
+function loadLocal() {
+  try {
+    const d = JSON.parse(localStorage.getItem(LOCAL_KEY));
+    if (d && Array.isArray(d.recipes)) Object.assign(state, { recipes: d.recipes, menu: d.menu || {}, checked: d.checked || {} });
+  } catch {}
+}
+function saveLocal() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ recipes: state.recipes, menu: state.menu, checked: state.checked })); } catch {}
+}
+
+function writeError(e) {
+  if (e && e.code === "invalid_argument") toast("You can view this recipe book but not change it. Ask the owner for Contributor access.");
+  else if (e && e.code === "quota_exceeded") toast("The recipe book is full. Delete some recipes to add more.");
+  else toast("Couldn't save. Check your connection and try again.");
+}
+
+let planQueue = Promise.resolve();
+function savePlan() {
+  if (!db) { saveLocal(); return; }
+  const body = { menu: { ...state.menu }, checked: { ...state.checked } };
+  planQueue = planQueue.then(() => db.doc("plan/week").set(body)).catch(writeError);
+}
+
+async function putRecipe(recipe) {
+  if (!db) {
+    const i = state.recipes.findIndex((r) => r.id === recipe.id);
+    if (i >= 0) state.recipes[i] = recipe; else state.recipes.push(recipe);
+    saveLocal();
+    render();
+    return;
+  }
+  const { id, ...body } = recipe;
+  await db.collection("recipes").doc(id).set(body);
+}
+
+async function removeRecipe(id) {
+  for (const key of Object.keys(state.menu)) if (state.menu[key] === id) delete state.menu[key];
+  if (!db) {
+    state.recipes = state.recipes.filter((r) => r.id !== id);
+    saveLocal();
+    render();
+    return;
+  }
+  await db.collection("recipes").doc(id).delete();
+  savePlan();
+}
+
+async function connect() {
+  try { db = window.claude?.use ? await window.claude.use("db") : null; } catch { db = null; }
+  if (!db) {
+    loadLocal();
+    state.ready = true;
+    $("#status").textContent = "Saved in this browser only";
+    render();
+    return;
+  }
+  $("#status").textContent = "Shared with everyone who has this link";
+  const fail = () => { $("#status").textContent = "Offline. Reload to reconnect."; };
+  db.collection("recipes").onSnapshot((snap) => {
+    state.recipes = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    state.ready = true;
+    render();
+  }, fail);
+  db.doc("plan/week").onSnapshot((snap) => {
+    const d = snap.data() || {};
+    state.menu = { ...(d.menu || {}) };
+    state.checked = { ...(d.checked || {}) };
+    render();
+  }, fail);
+}
+
+// ---------- Tabs ----------
+function showTab(name) {
+  document.querySelectorAll("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.querySelectorAll(".tab").forEach((t) => (t.hidden = t.id !== `tab-${name}`));
+}
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// ---------- Recipes ----------
+function renderRecipes() {
+  const list = $("#recipe-list");
+  if (!state.ready) { list.innerHTML = `<div class="empty" style="grid-column:1/-1"><p>Opening the recipe book…</p></div>`; return; }
+  if (!state.recipes.length) {
+    list.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <p>No recipes yet. Add your family's first recipe, or start with three examples you can edit.</p>
+      <button class="primary" id="empty-new">+ New recipe</button> <button id="add-examples">Add example recipes</button></div>`;
+    $("#empty-new").onclick = () => openEditor();
+    $("#add-examples").onclick = addExamples;
+    return;
+  }
+  const q = $("#search").value.trim().toLowerCase();
+  const shown = state.recipes
+    .filter((r) => !q || [r.name, r.category, ...(r.ingredients || [])].join(" ").toLowerCase().includes(q))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  list.innerHTML = shown.length
+    ? shown.map((r) => `
+        <button class="card" data-id="${esc(r.id)}">
+          ${r.category ? `<span class="chip">${esc(r.category)}</span>` : ""}
+          <h3>${esc(r.name)}</h3>
+          <span class="meta">${esc(metaLine(r) || `${(r.ingredients || []).length} ingredients`)}</span>
+        </button>`).join("")
+    : `<div class="empty" style="grid-column:1/-1"><p>No recipes match “${esc(q)}”.</p></div>`;
+  $("#categories").innerHTML = [...new Set(state.recipes.map((r) => r.category).filter(Boolean))].map((c) => `<option value="${esc(c)}">`).join("");
+}
+
+async function addExamples() {
+  try { for (const r of EXAMPLES) await putRecipe({ id: newId(), ...r }); toast("Added 3 example recipes"); }
+  catch (e) { writeError(e); }
+}
+
+$("#search").addEventListener("input", renderRecipes);
+$("#new-recipe").addEventListener("click", () => openEditor());
+$("#recipe-list").addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (card) openView(card.dataset.id);
+});
+
+function openEditor(id = null) {
+  editingId = id;
+  const r = id ? findRecipe(id) : null;
+  $("#recipe-form").reset();
+  $("#dialog-title").textContent = r ? "Edit recipe" : "New recipe";
+  $("#delete-recipe").hidden = !r;
+  if (r) {
+    $("#f-name").value = r.name;
+    $("#f-category").value = r.category || "";
+    $("#f-servings").value = r.servings || "";
+    $("#f-time").value = r.time || "";
+    $("#f-ingredients").value = (r.ingredients || []).join("\n");
+    $("#f-steps").value = (r.steps || []).join("\n");
+    $("#f-notes").value = r.notes || "";
+  }
+  $("#recipe-dialog").showModal();
+}
+
+$("#cancel-recipe").addEventListener("click", () => $("#recipe-dialog").close());
+$("#recipe-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const recipe = {
+    id: editingId || newId(),
+    name: $("#f-name").value.trim(),
+    category: $("#f-category").value.trim(),
+    servings: Number($("#f-servings").value) || null,
+    time: Number($("#f-time").value) || null,
+    ingredients: lines($("#f-ingredients").value),
+    steps: lines($("#f-steps").value),
+    notes: $("#f-notes").value.trim(),
+  };
+  try {
+    await putRecipe(recipe);
+    $("#recipe-dialog").close();
+    toast(`Saved “${recipe.name}”`);
+  } catch (err) { writeError(err); }
+});
+
+$("#delete-recipe").addEventListener("click", async () => {
+  const r = findRecipe(editingId);
+  if (!r) return;
+  $("#recipe-dialog").close();
+  if (!(await ask(`Delete “${r.name}”? This removes it for everyone.`, "Delete"))) { $("#recipe-dialog").showModal(); return; }
+  try { await removeRecipe(r.id); toast(`Deleted “${r.name}”`); } catch (err) { writeError(err); }
+});
+
+function openView(id) {
+  viewingId = id;
+  const r = findRecipe(id);
+  if (!r) return;
+  $("#view-body").innerHTML = `
+    ${r.category ? `<span class="chip">${esc(r.category)}</span>` : ""}
+    <h2>${esc(r.name)}</h2>
+    <div class="meta">${esc(metaLine(r))}</div>
+    <h3>Ingredients</h3>
+    <ul>${(r.ingredients || []).map((i) => `<li>${esc(i)}</li>`).join("") || "<li>None listed</li>"}</ul>
+    <h3>Steps</h3>
+    <ol>${(r.steps || []).map((s) => `<li>${esc(s)}</li>`).join("") || "<li>None listed</li>"}</ol>
+    ${r.notes ? `<h3>Notes</h3><p>${esc(r.notes)}</p>` : ""}`;
+  $("#view-dialog").showModal();
+}
+$("#close-view").addEventListener("click", () => $("#view-dialog").close());
+$("#edit-from-view").addEventListener("click", () => { $("#view-dialog").close(); openEditor(viewingId); });
+
+// ---------- Weekly menu ----------
+function renderMenu() {
+  const sorted = [...state.recipes].sort((a, b) => a.name.localeCompare(b.name));
+  const options = (selected) => `<option value="">–</option>` +
+    sorted.map((r) => `<option value="${esc(r.id)}"${r.id === selected ? " selected" : ""}>${esc(r.name)}</option>`).join("");
+  $("#menu-table").innerHTML =
+    `<thead><tr><th></th>${MEALS.map((m) => `<th>${m}</th>`).join("")}</tr></thead><tbody>` +
+    DAYS.map((d) => `<tr><th>${d}</th>${MEALS.map((m) =>
+      `<td><select id="slot-${d}-${m}" data-slot="${d}|${m}" aria-label="${d} ${m}">${options(state.menu[`${d}|${m}`])}</select></td>`).join("")}</tr>`).join("") +
+    `</tbody>`;
+}
+
+$("#menu-table").addEventListener("change", (e) => {
+  const slot = e.target.dataset.slot;
+  if (!slot) return;
+  if (e.target.value) state.menu[slot] = e.target.value; else delete state.menu[slot];
+  savePlan();
+  renderShopping();
+});
+
+$("#clear-menu").addEventListener("click", async () => {
+  if (!(await ask("Clear the whole week's menu and shopping list?", "Clear week"))) return;
+  state.menu = {};
+  state.checked = {};
+  savePlan();
+  render();
+});
+
+// ---------- Shopping list ----------
+function renderShopping() {
+  const items = new Map();
+  for (const id of Object.values(state.menu)) {
+    const r = findRecipe(id);
+    if (!r) continue;
+    for (const ing of r.ingredients || []) {
+      const key = ing.toLowerCase();
+      const entry = items.get(key) || { text: ing, recipes: new Set() };
+      entry.recipes.add(r.name);
+      items.set(key, entry);
+    }
+  }
+  $("#shopping-list").innerHTML = items.size
+    ? [...items.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, { text, recipes }], i) => `
+        <li class="${state.checked[key] ? "done" : ""}">
+          <label><input type="checkbox" id="shop-${i}" data-key="${esc(key)}"${state.checked[key] ? " checked" : ""}>
+          <span class="item">${esc(text)}</span><span class="meta for">${[...recipes].map(esc).join(", ")}</span></label>
+        </li>`).join("")
+    : `<li class="empty" style="border:0">Add recipes to the weekly menu and their ingredients will appear here.</li>`;
+}
+
+$("#shopping-list").addEventListener("change", (e) => {
+  const key = e.target.dataset.key;
+  if (!key) return;
+  if (e.target.checked) state.checked[key] = true; else delete state.checked[key];
+  e.target.closest("li").classList.toggle("done", e.target.checked);
+  savePlan();
+});
+
+function render() {
+  renderRecipes();
+  renderMenu();
+  renderShopping();
+}
+
+render();
+connect();
+</script>
