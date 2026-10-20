@@ -48,6 +48,7 @@ the page's shared storage, so every device sees the same data.
   per device), a filter panel (tags, cooking time, photo, not cooked
   yet, sort order), tags, cooking time, servings, notes and a dated cooking
   journal; Claude can fill in a recipe from a photo
-- **Plan**: the next two weeks, three meals a day; pick dishes or let it surprise you
+- **Plan**: the next two weeks, three meals a day, each with as many dishes as you
+  like; pick dishes or let it surprise you
 - **Fridge**: list what's at home to see matching recipes and get new ideas from Claude
 - **Shop**: ingredients for the next 3 or 7 days, minus what's already at home

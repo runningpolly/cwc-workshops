@@ -184,6 +184,15 @@ details.meal[open] .meal-sumname { visibility: hidden; }
 }
 .meal-name { font: 600 1.25rem/1.25 var(--font-display); }
 .meal-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.dish-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.dish-list li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dish { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 0; border: 0; box-shadow: none; background: transparent; justify-content: flex-start; text-align: left; border-radius: 12px; }
+.dish:active { transform: none; box-shadow: none; }
+.dish .mini { width: 40px; height: 40px; flex: none; border-radius: 11px; border: 2px solid var(--line); object-fit: cover; display: grid; place-items: center; font-size: 22px; background: var(--sun-soft); overflow: hidden; }
+.dish-name { flex: 1; min-width: 0; font: 600 1.05rem/1.25 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dish .time { font-size: 0.82rem; color: var(--muted); }
+.dish-x { width: 30px; height: 30px; padding: 0; border-radius: 50%; box-shadow: none; font-size: 0.8rem; flex: none; border-color: var(--soft-line); color: var(--muted); }
+.meal-count { flex: none; font-size: 0.75rem; font-weight: 800; color: var(--muted); }
 .timeline { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .timeline li { display: grid; grid-template-columns: 80px 1fr; gap: 10px; align-items: start; }
 .timeline li.gone { opacity: 0.5; }
@@ -338,6 +347,9 @@ form.sheet label small { font-weight: 600; color: var(--muted); }
 .picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .picker-grid .rcard .pic { font-size: 44px; }
 .picker-grid .rcard h3 { font-size: 1rem; }
+.picker-grid .rcard { position: relative; }
+.picker-grid .rcard.picked { outline: 4px solid var(--leaf); outline-offset: 1px; }
+.picker-grid .rcard.picked::after { content: "✓"; position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--leaf); color: #fff; font-weight: 800; border: 2px solid var(--line); }
 
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 50; max-width: calc(100vw - 32px);
@@ -553,10 +565,13 @@ form.sheet label small { font-weight: 600; color: var(--muted); }
       <button class="filter-btn" id="p-filter-btn" aria-expanded="false" aria-controls="p-filters">⚙️ <span data-t="filter">Filter</span> <span class="count" id="p-filter-count" hidden></span></button>
       <button class="sun" id="p-random">🎲 <span data-t="surprise">Surprise me</span></button>
     </div>
+    <p class="hint" data-t="pickHint"></p>
     <div class="panel filters" id="p-filters" hidden></div>
     <div class="picker-grid" id="p-grid"></div>
-    <div class="toolbar" id="p-current" hidden>
-      <button class="danger" id="p-clear" data-t="removeDish">Remove dish from this meal</button>
+    <div class="sticky-actions">
+      <button class="danger" id="p-clear" data-t="clearMeal" hidden>Clear this meal</button>
+      <span class="spacer"></span>
+      <button class="primary" data-close id="p-done">Done</button>
     </div>
   </div>
 </dialog>
@@ -603,7 +618,10 @@ const STR = {
     photos: "Photos", photosHint: "of the dish, a recipe card or a cookbook page", fillFromPhoto: "Fill in from photo", dishName: "Dish name", dishNamePlaceholder: "Grandma's dumplings",
     cookTime: "Cooking time", minutes: "(minutes)", serves: "Serves", emoji: "Emoji", tags: "Tags", tagsHint: "separate with commas", tagsPlaceholder: "Dinner, Quick, Kids love",
     ingredients: "Ingredients", onePerLine: "one per line", steps: "Steps", notes: "Notes", notesHint: "tips, variations, where it came from",
-    delete: "Delete", cancel: "Cancel", saveRecipe: "Save recipe", surprise: "Surprise me", removeDish: "Remove dish from this meal", addToPlan: "Add to plan",
+    delete: "Delete", cancel: "Cancel", saveRecipe: "Save recipe", surprise: "Surprise me", clearMeal: "Clear this meal", addToPlan: "Add to plan",
+    pickHint: "Tap dishes to add them to this meal, tap again to remove. A meal can have several dishes.",
+    pickedN: (n) => (n ? `Done (${n} dish${n === 1 ? "" : "es"})` : "Done"), addDish: "Add dish", removeFromMeal: "Remove from this meal",
+    addsTo: (n) => `Will be added alongside ${n}.`, alreadyIn: "Already planned for this meal.", added: (n) => `Added ${n} 🎉`, removed: (n) => `Removed ${n}`, dishesN: (n) => `${n} dishes`, longest: "longest dish",
     newTitle: "New recipe", editTitle: "Edit recipe", aiHint: "Claude reads the first photo and fills in the empty fields.", aiReading: "Reading the photo…",
     aiDone: "Filled in. Check it over before saving.", aiFail: "Couldn't read that photo. Try a clearer one, or type the recipe in.", addPhoto: "Add photo",
     meals: { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner" },
@@ -647,7 +665,10 @@ const STR = {
     photos: "照片", photosHint: "成品、菜谱卡片或菜谱书页", fillFromPhoto: "从照片识别", dishName: "菜名", dishNamePlaceholder: "奶奶的饺子",
     cookTime: "烹饪时间", minutes: "（分钟）", serves: "几人份", emoji: "表情", tags: "标签", tagsHint: "用逗号或顿号分隔", tagsPlaceholder: "晚餐、快手菜、孩子爱吃",
     ingredients: "食材", onePerLine: "每行一项", steps: "步骤", notes: "笔记", notesHint: "小窍门、变化做法、菜谱来源",
-    delete: "删除", cancel: "取消", saveRecipe: "保存菜谱", surprise: "随机选", removeDish: "从这顿饭移除", addToPlan: "加入计划",
+    delete: "删除", cancel: "取消", saveRecipe: "保存菜谱", surprise: "随机选", clearMeal: "清空这顿饭", addToPlan: "加入计划",
+    pickHint: "点菜品加入这顿饭，再点一下取消。一顿饭可以有好几道菜。",
+    pickedN: (n) => (n ? `好了（${n} 道菜）` : "好了"), addDish: "加一道菜", removeFromMeal: "从这顿饭移除",
+    addsTo: (n) => `会和${n}一起安排。`, alreadyIn: "这顿饭已经有这道菜了。", added: (n) => `已加入${n} 🎉`, removed: (n) => `已移除${n}`, dishesN: (n) => `${n} 道菜`, longest: "最长的一道菜",
     newTitle: "新菜谱", editTitle: "编辑菜谱", aiHint: "Claude 会读取第一张照片并填写空白栏。", aiReading: "正在识别照片……",
     aiDone: "已填好，保存前请检查一下。", aiFail: "无法识别这张照片，换一张清晰的或手动输入。", addPhoto: "添加照片",
     meals: { breakfast: "早餐", lunch: "午餐", dinner: "晚餐" },
@@ -746,6 +767,12 @@ const fmtTime = (m) => {
 const fmtClock = (h, m) => new Date(2000, 0, 1, h, m).toLocaleTimeString(locale(), { hour: "numeric", minute: "2-digit" });
 const mealLabel = (k) => T("meals")[k];
 const dayDoc = (k) => state.days[k] || { meals: {}, note: "" };
+// A meal holds a list of dishes. Plans saved before that held a single recipeId.
+const rawDishes = (slot) => slot?.dishes || (slot?.recipeId ? [slot.recipeId] : []);
+const slotDishes = (slot) => rawDishes(slot).filter((id) => state.recipes[id]);
+const slotRecipes = (slot) => slotDishes(slot).map((id) => state.recipes[id]);
+const mealTime = (rs) => Math.max(0, ...rs.map((r) => r.time || 0));
+const dishNames = (rs) => rs.map((r) => r.name).join(lang === "zh" ? "、" : " · ");
 // Lowercase and drop punctuation; Chinese characters are kept, so 白菜 matches 半颗白菜.
 const norm = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim();
 const minutesNow = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
@@ -966,7 +993,7 @@ document.querySelectorAll("details[data-fold]").forEach((d) => {
 // ================= Today =================
 function plannedMeals(k) {
   const meals = dayDoc(k).meals || {};
-  return MEALS.filter((m) => meals[m.k]?.recipeId && state.recipes[meals[m.k].recipeId]);
+  return MEALS.filter((m) => slotDishes(meals[m.k]).length);
 }
 function autoFocusOffset() {
   const t = todayKey();
@@ -987,38 +1014,40 @@ function mealStates(k) {
   let nextFound = false;
   return MEALS.map((m) => {
     const slot = meals[m.k];
-    const r = slot && state.recipes[slot.recipeId];
-    const done = !!(r && slot.done);
+    const rs = slotRecipes(slot);
+    const done = !!(rs.length && slot.done);
     const past = isPast(k, m);
-    const next = !nextFound && !!r && !done && !past;
+    const next = !nextFound && rs.length > 0 && !done && !past;
     if (next) nextFound = true;
-    return { m, slot, r, done, past, next };
+    return { m, slot, rs, done, past, next };
   });
 }
 
 function mealCard(k, s) {
-  const { m, slot, r, done, past, next } = s;
+  const { m, slot, rs, done, past, next } = s;
   const key = `${k}|${m.k}`;
   const open = state.mealOpen[key] ?? (!done && !past);
   const pill = done ? `<span class="pill done">✓ ${T("stDone")}</span>` : next ? `<span class="pill next">${T("stNext")}</span>` : past ? `<span class="pill past">${T("stPast")}</span>` : "";
   const cls = ["meal", done && "done", past && "past", next && "next"].filter(Boolean).join(" ");
   const summary = `<summary><span class="meal-label">${m.emoji} ${esc(mealLabel(m.k))}</span>
-    <span class="meal-sumname">${r ? esc(r.name) : `<span class="muted">${T("nothingPlanned")}</span>`}</span>${pill}</summary>`;
-  if (!r) {
+    <span class="meal-sumname">${rs.length ? esc(dishNames(rs)) : `<span class="muted">${T("nothingPlanned")}</span>`}</span>${rs.length > 1 ? `<span class="meal-count">${T("dishesN", rs.length)}</span>` : ""}${pill}</summary>`;
+  if (!rs.length) {
     return `<details class="${cls}" data-meal="${key}"${open ? " open" : ""}>${summary}
-      <div class="meal-inner"><div class="muted">${T("nothingPlanned")}</div>
-      <div class="meal-actions"><button class="sun small" data-pick="${key}">＋ ${T("pickDish")}</button></div></div></details>`;
+      <div class="meal-inner"><div class="meal-actions"><button class="sun small" data-pick="${key}">＋ ${T("pickDish")}</button></div></div></details>`;
   }
-  const img = safeImg(r.thumb);
+  const rows = rs.map((r) => {
+    const img = safeImg(r.thumb);
+    return `<li><button class="dish" data-open="${esc(r.id)}">
+        ${img ? `<img class="mini" src="${img}" alt="">` : `<span class="mini ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
+        <span class="dish-name">${esc(r.name)}</span>${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}
+      </button><button class="dish-x" data-unplan="${key}|${esc(r.id)}" aria-label="${esc(T("removeFromMeal"))}">✕</button></li>`;
+  }).join("");
   return `<details class="${cls}" data-meal="${key}"${open ? " open" : ""}>${summary}
     <div class="meal-inner">
-      <button class="meal-body" data-open="${esc(r.id)}">
-        ${img ? `<img class="thumb" src="${img}" alt="">` : `<span class="thumb ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
-        <span style="display:grid;gap:4px"><span class="meal-name">${esc(r.name)}</span>${r.time ? `<span class="time muted">⏱ ${fmtTime(r.time)}</span>` : ""}</span>
-      </button>
+      <ul class="dish-list">${rows}</ul>
       <div class="meal-actions">
         <button class="${slot.done ? "" : "leaf"} small" data-done="${key}">${slot.done ? "↺ " + T("notDone") : "✓ " + T("done")}</button>
-        <button class="small" data-pick="${key}">🔄 ${T("swap")}</button>
+        <button class="small" data-pick="${key}">＋ ${T("addDish")}</button>
       </div>
     </div>
   </details>`;
@@ -1031,22 +1060,22 @@ function renderToday() {
   $("#focus-kicker").textContent = dayLabel(k) + (auto ? " · " + T("allDoneToday") : "");
   $("#focus-date").textContent = fromKey(k).toLocaleDateString(locale(), { weekday: "long", day: "numeric", month: "long" });
   const states = mealStates(k);
-  const planned = states.filter((s) => s.r);
+  const planned = states.filter((s) => s.rs.length);
   const doneN = planned.filter((s) => s.done).length;
   $("#focus-progress").style.width = planned.length ? `${(doneN / planned.length) * 100}%` : "0%";
   $("#focus-progress-text").textContent = !state.ready ? T("opening") : planned.length ? T("mealsDone", doneN, planned.length) : T("noMeals");
   $("#focus-meals").innerHTML = states.map((s) => mealCard(k, s)).join("");
 
   // Timeline: when to start each planned meal; finished or past ones are dimmed.
-  const startOf = (s) => new Date(2000, 0, 1, s.m.at[0], s.m.at[1] - (s.r.time || 0));
+  const startOf = (s) => new Date(2000, 0, 1, s.m.at[0], s.m.at[1] - mealTime(s.rs));
   const tl = planned.map((s) => {
-    const t = s.r.time || 0;
+    const t = mealTime(s.rs);
     const st = startOf(s);
     return `<li class="${s.done || s.past ? "gone" : ""}"><span class="when">${fmtClock(st.getHours(), st.getMinutes())}</span>
-      <span><b>${t ? T("start") : T("serve")} ${esc(s.r.name)}</b><br><span class="muted">${esc(T("atTime", mealLabel(s.m.k), fmtClock(...s.m.at)))} · ${t ? T("takes", fmtTime(t)) : T("noTime")}</span></span></li>`;
+      <span><b>${t ? T("start") : T("serve")} ${esc(dishNames(s.rs))}</b><br><span class="muted">${esc(T("atTime", mealLabel(s.m.k), fmtClock(...s.m.at)))} · ${t ? T("takes", fmtTime(t)) + (s.rs.length > 1 ? ` (${T("longest")})` : "") : T("noTime")}</span></span></li>`;
   });
   const upcoming = planned.filter((s) => !s.done && !s.past);
-  const total = upcoming.reduce((sum, s) => sum + (s.r.time || 0), 0);
+  const total = upcoming.reduce((sum, s) => sum + mealTime(s.rs), 0);
   $("#ready-timeline").innerHTML = tl.length
     ? tl.join("") + `<li><span class="when" style="background:var(--sun-soft)">${T("total")}</span><span><b>${fmtTime(total) || "—"}</b> <span class="muted">${T("ofCooking")}</span></span></li>`
     : `<li class="muted" style="display:block">${T("timelineEmpty")}</li>`;
@@ -1076,7 +1105,7 @@ function renderToday() {
     const meals = dayDoc(dk).meals || {};
     return `<button class="up-card" data-focus="${dk}">
       <span class="d">${esc(dayLabel(dk))}</span><span class="muted" style="font-size:.8rem">${esc(dateText(dk))}</span>
-      ${MEALS.map((m) => { const r = state.recipes[meals[m.k]?.recipeId]; return `<span class="m">${m.emoji} ${r ? `<b>${esc(r.name)}</b>` : "–"}</span>`; }).join("")}
+      ${MEALS.map((m) => { const rs = slotRecipes(meals[m.k]); return `<span class="m">${m.emoji} ${rs.length ? `<b>${esc(dishNames(rs))}</b>` : "–"}</span>`; }).join("")}
     </button>`;
   }).join("");
 }
@@ -1113,14 +1142,22 @@ document.addEventListener("click", (e) => {
   if (open) return openRecipe(open.dataset.open);
   const pick = e.target.closest("[data-pick]");
   if (pick) { const [k, m] = pick.dataset.pick.split("|"); return openPicker(k, m); }
+  const unplan = e.target.closest("[data-unplan]");
+  if (unplan) {
+    const [k, m, id] = unplan.dataset.unplan.split("|");
+    removeDish(k, m, id);
+    toast(T("removed", state.recipes[id]?.name || ""));
+    return;
+  }
   const done = e.target.closest("[data-done]");
   if (done) {
     const [k, m] = done.dataset.done.split("|");
     const d = dayDoc(k);
-    d.meals[m] = { ...d.meals[m], done: !d.meals[m].done };
+    const slot = d.meals[m];
+    d.meals = { ...d.meals, [m]: { dishes: slotDishes(slot), done: !slot.done } };
     state.days[k] = d;
     delete state.mealOpen[`${k}|${m}`];
-    if (d.meals[m].done) toast(T("markedDone", state.recipes[d.meals[m].recipeId]?.name || ""));
+    if (d.meals[m].done) toast(T("markedDone", dishNames(slotRecipes(d.meals[m]))));
     saveDay(k);
     render();
   }
@@ -1139,13 +1176,14 @@ function gatherIngredients(keys, skipPast = false) {
     const meals = dayDoc(k).meals || {};
     for (const m of MEALS) {
       const slot = meals[m.k];
-      const r = slot && state.recipes[slot.recipeId];
-      if (!r || slot.done || (skipPast && isPast(k, m))) continue;
-      for (const ing of r.ingredients || []) {
-        const key = norm(ing);
-        const it = items.get(key) || { text: ing, recipes: new Set() };
-        it.recipes.add(r.name);
-        items.set(key, it);
+      if (!slot || slot.done || (skipPast && isPast(k, m))) continue;
+      for (const r of slotRecipes(slot)) {
+        for (const ing of r.ingredients || []) {
+          const key = norm(ing);
+          const it = items.get(key) || { text: ing, recipes: new Set() };
+          it.recipes.add(r.name);
+          items.set(key, it);
+        }
       }
     }
   }
@@ -1162,9 +1200,11 @@ function cookedMap() {
   const map = {};
   for (const [k, d] of Object.entries(state.days)) for (const s of Object.values(d.meals || {})) {
     if (!s?.done) continue;
-    const e = (map[s.recipeId] ||= { n: 0, last: "" });
-    e.n++;
-    if (k > e.last) e.last = k;
+    for (const id of rawDishes(s)) {
+      const e = (map[id] ||= { n: 0, last: "" });
+      e.n++;
+      if (k > e.last) e.last = k;
+    }
   }
   return map;
 }
@@ -1538,7 +1578,13 @@ $("#e-delete").addEventListener("click", async () => {
   try {
     for (const [k, d] of Object.entries(state.days)) {
       let changed = false;
-      for (const m of Object.keys(d.meals || {})) if (d.meals[m]?.recipeId === r.id) { delete d.meals[m]; changed = true; }
+      for (const m of Object.keys(d.meals || {})) {
+        const ids = rawDishes(d.meals[m]);
+        if (!ids.includes(r.id)) continue;
+        const left = ids.filter((x) => x !== r.id);
+        if (left.length) d.meals[m] = { dishes: left, done: !!d.meals[m].done }; else delete d.meals[m];
+        changed = true;
+      }
       if (changed) saveDay(k);
     }
     for (const pid of r.photoIds || []) delDoc("photos", pid).catch(() => {});
@@ -1555,7 +1601,6 @@ function openPicker(k, mealK) {
   $("#p-title").textContent = `${meal.emoji} ${mealLabel(mealK)} · ${dayLabel(k)}`;
   $("#p-search").value = "";
   state.pfilter = newFilter();
-  $("#p-current").hidden = !dayDoc(k).meals?.[mealK];
   renderPicker();
   $("#pick-dialog").showModal();
 }
@@ -1563,31 +1608,45 @@ function renderPicker() {
   const q = $("#p-search").value.trim().toLowerCase();
   const list = filtered(state.pfilter, q);
   renderFilters(state.pfilter, $("#p-filters"), $("#p-filter-btn"), $("#p-filter-count"), list.length);
+  const picked = pickTarget ? slotDishes(dayDoc(pickTarget.k).meals?.[pickTarget.mealK]) : [];
   const cooked = cookedMap();
   $("#p-grid").innerHTML = list.length
-    ? list.map((r) => recipeCard(r, cooked, "data-choose")).join("")
+    ? list.map((r) => recipeCard(r, cooked, "data-choose").replace('class="rcard"', `class="rcard${picked.includes(r.id) ? " picked" : ""}" aria-pressed="${picked.includes(r.id)}"`)).join("")
     : `<div class="empty" style="grid-column:1/-1">${Object.keys(state.recipes).length ? T("noMatch") : T("addFirst")}</div>`;
+  $("#p-clear").hidden = !picked.length;
+  $("#p-done").textContent = T("pickedN", picked.length);
 }
 $("#p-search").addEventListener("input", renderPicker);
 $("#p-filter-btn").addEventListener("click", () => { state.pfilter.open = !state.pfilter.open; renderPicker(); });
 $("#p-filters").addEventListener("click", (e) => onFilterClick(state.pfilter, e, renderPicker));
-function assign(k, mealK, recipeId) {
+function setDishes(k, mealK, ids, done = false) {
   const d = dayDoc(k);
-  d.meals = { ...d.meals, [mealK]: { recipeId, done: false } };
+  const meals = { ...d.meals };
+  if (ids.length) meals[mealK] = { dishes: ids, done }; else delete meals[mealK];
+  d.meals = meals;
   state.days[k] = d;
   delete state.mealOpen[`${k}|${mealK}`];
   saveDay(k);
   render();
 }
+function addDish(k, mealK, id) {
+  const ids = slotDishes(dayDoc(k).meals?.[mealK]);
+  if (!ids.includes(id)) setDishes(k, mealK, [...ids, id]);
+}
+function removeDish(k, mealK, id) {
+  const slot = dayDoc(k).meals?.[mealK];
+  setDishes(k, mealK, slotDishes(slot).filter((x) => x !== id), !!slot?.done);
+}
 $("#p-grid").addEventListener("click", (e) => {
   const b = e.target.closest("[data-choose]");
   if (!b || !pickTarget) return;
-  assign(pickTarget.k, pickTarget.mealK, b.dataset.choose);
-  $("#pick-dialog").close();
-  toast(T("onMenu", state.recipes[b.dataset.choose].name));
+  const id = b.dataset.choose;
+  const has = slotDishes(dayDoc(pickTarget.k).meals?.[pickTarget.mealK]).includes(id);
+  if (has) removeDish(pickTarget.k, pickTarget.mealK, id); else addDish(pickTarget.k, pickTarget.mealK, id);
+  toast(T(has ? "removed" : "added", state.recipes[id].name));
 });
 $("#p-random").addEventListener("click", () => {
-  const cards = [...$("#p-grid").querySelectorAll("[data-choose]")];
+  const cards = [...$("#p-grid").querySelectorAll("[data-choose]:not(.picked)")];
   if (!cards.length) return;
   const pick = cards[Math.floor(Math.random() * cards.length)];
   pick.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -1596,12 +1655,8 @@ $("#p-random").addEventListener("click", () => {
   toast(T("howAbout", state.recipes[pick.dataset.choose].name));
 });
 $("#p-clear").addEventListener("click", () => {
-  const d = dayDoc(pickTarget.k);
-  delete d.meals[pickTarget.mealK];
-  state.days[pickTarget.k] = d;
-  saveDay(pickTarget.k);
+  setDishes(pickTarget.k, pickTarget.mealK, []);
   $("#pick-dialog").close();
-  render();
 });
 
 // ================= When (plan a given recipe) =================
@@ -1617,13 +1672,13 @@ function renderWhen() {
   $("#w-dates").innerHTML = Array.from({ length: PLAN_DAYS }, (_, i) => dkey(addDays(new Date(), i))).map((k) =>
     `<button data-wdate="${k}" aria-pressed="${when.k === k}"><span>${esc(shortDay(k))}</span><b>${fromKey(k).getDate()}</b></button>`).join("");
   $("#w-meals").innerHTML = MEALS.map((m) => `<button data-wmeal="${m.k}" aria-pressed="${when.meal === m.k}">${m.emoji} ${esc(mealLabel(m.k))}</button>`).join("");
-  const existing = state.recipes[dayDoc(when.k).meals?.[when.meal]?.recipeId];
-  $("#w-note").textContent = existing ? T("replaces", existing.name) : "";
+  const existing = slotRecipes(dayDoc(when.k).meals?.[when.meal]);
+  $("#w-note").textContent = existing.some((r) => r.id === when.recipeId) ? T("alreadyIn") : existing.length ? T("addsTo", dishNames(existing)) : "";
 }
 $("#w-dates").addEventListener("click", (e) => { const b = e.target.closest("[data-wdate]"); if (b) { when.k = b.dataset.wdate; renderWhen(); } });
 $("#w-meals").addEventListener("click", (e) => { const b = e.target.closest("[data-wmeal]"); if (b) { when.meal = b.dataset.wmeal; renderWhen(); } });
 $("#w-save").addEventListener("click", () => {
-  assign(when.k, when.meal, when.recipeId);
+  addDish(when.k, when.meal, when.recipeId);
   $("#when-dialog").close();
   toast(T("plannedFor", dayLabel(when.k)));
 });
@@ -1637,9 +1692,9 @@ function renderPlan() {
       <h3>${esc(dayLabel(k))} <small>${esc(dateText(k))}</small></h3>
       <div class="slots">${MEALS.map((m) => {
         const s = meals[m.k];
-        const r = s && state.recipes[s.recipeId];
-        return r
-          ? `<button class="slot filled ${s.done ? "done" : ""}" data-pick="${k}|${m.k}"><span class="e">${s.done ? "✅" : esc(recipeEmoji(r))}</span><span class="txt"><small>${esc(mealLabel(m.k))}</small><span>${esc(r.name)}</span></span></button>`
+        const rs = slotRecipes(s);
+        return rs.length
+          ? `<button class="slot filled ${s.done ? "done" : ""}" data-pick="${k}|${m.k}"><span class="e">${s.done ? "✅" : esc(recipeEmoji(rs[0]))}</span><span class="txt"><small>${esc(mealLabel(m.k))}${rs.length > 1 ? ` · ${esc(T("dishesN", rs.length))}` : ""}</small><span>${esc(dishNames(rs))}</span></span></button>`
           : `<button class="slot" data-pick="${k}|${m.k}"><span class="e">${m.emoji}</span><span class="txt"><small>${esc(mealLabel(m.k))}</small><span class="muted">＋ ${T("pickDish")}</span></span></button>`;
       }).join("")}</div>
     </div>`;
