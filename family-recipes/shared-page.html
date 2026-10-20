@@ -733,7 +733,7 @@ const PLAN_DAYS = 14;
 // ================= State =================
 const newFilter = () => ({ tags: [], time: 0, photo: false, never: false, sort: "az", open: false });
 const state = {
-  recipes: {}, days: {}, pantry: [], checked: {},
+  recipes: {}, days: {}, pantry: [], checked: {}, tr: { zh: {}, en: {} },
   ready: false, view: "today", focusOffset: null, shopDays: 7,
   filter: newFilter(), pfilter: newFilter(), mealOpen: {},
 };
@@ -772,9 +772,102 @@ const rawDishes = (slot) => slot?.dishes || (slot?.recipeId ? [slot.recipeId] : 
 const slotDishes = (slot) => rawDishes(slot).filter((id) => state.recipes[id]);
 const slotRecipes = (slot) => slotDishes(slot).map((id) => state.recipes[id]);
 const mealTime = (rs) => Math.max(0, ...rs.map((r) => r.time || 0));
-const dishNames = (rs) => rs.map((r) => r.name).join(lang === "zh" ? "、" : " · ");
+const dishNames = (rs) => rs.map((r) => tr(r.name)).join(lang === "zh" ? "、" : " · ");
 // Lowercase and drop punctuation; Chinese characters are kept, so 白菜 matches 半颗白菜.
 const norm = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N} ]+/gu, " ").replace(/\s+/g, " ").trim();
+// ----- Shopping/prep items: drop measured amounts, keep counts -----
+const CJK = /[\u3400-\u9fff]/;
+const EN_NUM = String.raw`\d+\s+\d+\/\d+|\d+(?:[.,]\d+)?(?:\s*[-–]\s*\d+)?|\d+\/\d+|[½¼¾⅓⅔]|half(?:\s+an?)?|an?|one|two|three|four|five|six|seven|eight|nine|ten|twelve|a few|a couple(?: of)?`;
+const EN_MEASURE = String.raw`tsps?|teaspoons?|tbsps?|tablespoons?|cups?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|g|grams?|kg|kilograms?|oz|ounces?|lbs?|pounds?|pinch(?:es)?|dash(?:es)?|handfuls?|splash(?:es)?|drizzle|knobs?`;
+const EN_COUNT = String.raw`cloves?|slices?|pieces?|stalks?|cans?|tins?|sprigs?|leaves|leaf|heads?|bunch(?:es)?|sticks?|fillets?|strips?|bulbs?|thighs?|breasts?|wings?|legs?|eggs?`;
+const EN_RE = new RegExp(String.raw`^(${EN_NUM})\s*(?:(${EN_MEASURE})\b\.?|(${EN_COUNT})\b)?\s*(?:of\s+)?(.+)$`, "i");
+const WORD_NUM = { a: "1", an: "1", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9", ten: "10", twelve: "12", half: "½", "half a": "½", "half an": "½", "a few": "a few", "a couple": "2", "a couple of": "2" };
+const ZH_NUM = String.raw`半|[\d.\/½]+|[一二两三四五六七八九十几]+`;
+const ZH_MEASURE = "克|千克|公斤|斤|两|毫升|升|ml|g|kg|小勺|大勺|勺|汤匙|茶匙|匙|小匙|杯|碗|小碗|滴";
+const ZH_COUNT = "个|根|颗|瓣|片|只|条|把|块|棵|头|粒|张|枚|朵|段|包|盒|罐|袋|串|节|支|份";
+const ZH_VAGUE = /\s*(适量|少许|若干|一点|一些|少量|随意)\s*$/;
+function parseIngredient(text) {
+  let t = String(text).trim().replace(/\s*[（(][^）)]*[）)]\s*/g, " ").trim();
+  if (CJK.test(t)) {
+    t = t.replace(ZH_VAGUE, "");
+    let m = t.match(new RegExp(`^(.+?)\\s*(${ZH_NUM})\\s*(${ZH_MEASURE}|${ZH_COUNT})?$`));
+    if (m && !new RegExp(`^(${ZH_NUM})$`).test(m[1])) {
+      const [, name, num, unit] = m;
+      return { name: name.trim(), qty: unit && new RegExp(`^(${ZH_MEASURE})$`).test(unit) ? "" : `${num}${unit ? " " + unit : ""}` };
+    }
+    m = t.match(new RegExp(`^(${ZH_NUM})\\s*(${ZH_MEASURE}|${ZH_COUNT})\\s*(.+)$`));
+    if (m) {
+      const [, num, unit, name] = m;
+      return { name: name.trim(), qty: new RegExp(`^(${ZH_MEASURE})$`).test(unit) ? "" : `${num} ${unit}` };
+    }
+    return { name: t, qty: "" };
+  }
+  t = t.replace(/\s*,?\s*(to taste|as needed|for frying|optional)\s*$/i, "");
+  const m = t.match(EN_RE);
+  let name = t, qty = "";
+  if (m) {
+    const [, num, measure, count, rest] = m;
+    name = rest;
+    if (!measure) {
+      const n = WORD_NUM[num.toLowerCase()] || num;
+      qty = count && !/^eggs?$/i.test(count) ? `${n} ${count.toLowerCase()}` : n;
+      if (count && /^eggs?$/i.test(count)) name = "eggs";
+    }
+  }
+  name = name.split(",")[0].trim();
+  return { name: name.charAt(0).toUpperCase() + name.slice(1), qty };
+}
+// Add up quantities that share a unit: "2" + "4" → "6", "2 根" + "1 根" → "3 根".
+function sumQty(qs) {
+  const by = new Map(), other = [];
+  for (const q of qs) {
+    const m = q.match(/^(\d+(?:\.\d+)?)(?:\s+(.+))?$/);
+    const unit = !m?.[2] || m[2] === "个" ? "" : m[2]; // "4 个" counts the same as "4"
+    if (m) by.set(unit, (by.get(unit) || 0) + parseFloat(m[1])); else other.push(q);
+  }
+  return [...[...by].map(([u, n]) => `${+n.toFixed(2)}${u ? " " + u : ""}`), ...other];
+}
+// Text written in the other language is shown through a shared translation table, filled in by Claude.
+const needsTr = (x) => (lang === "zh" ? !CJK.test(x) && /[a-z]/i.test(x) : CJK.test(x));
+const pendingTr = new Set();
+function tr(x) {
+  if (!x || !needsTr(x)) return x;
+  const v = state.tr[lang]?.[x];
+  if (v) return v;
+  pendingTr.add(x);
+  return x;
+}
+function itemLabel(it) {
+  const name = tr(it.name);
+  const q = sumQty(it.qtys).map((x) => tr(x)).join(" + ");
+  if (!q) return name;
+  return lang === "zh" ? `${name}（${q.replace(/ /g, "")}）` : `${name} (${q})`;
+}
+let trBusy = false, trFailed = false;
+async function translatePending() {
+  if (!sample || trBusy || trFailed || !pendingTr.size) return;
+  const target = lang;
+  const list = [...pendingTr].filter((x) => !state.tr[target]?.[x]).slice(0, 80);
+  pendingTr.clear();
+  if (!list.length) return;
+  trBusy = true;
+  try {
+    const res = await sample.json(
+      `Translate each of these cooking ingredient names, quantities or dish names into ${target === "zh" ? "Simplified Chinese, using the everyday words of Chinese home cooking (for quantities use Chinese measure words, e.g. \"3 cloves\" → \"3 瓣\")" : "plain English"}. Keep each one short.
+Reply with only a JSON object that maps each original string, exactly as given, to its translation.
+${JSON.stringify(list)}`,
+      { modelTier: "quick" },
+    );
+    const add = {};
+    for (const x of list) if (typeof res?.[x] === "string" && res[x].trim()) add[x] = res[x].trim().slice(0, 80);
+    if (Object.keys(add).length) {
+      state.tr = { ...state.tr, [target]: { ...state.tr[target], ...add } };
+      await putDoc("lists", "translations", state.tr).catch(() => {});
+      render();
+    }
+  } catch { trFailed = true; } finally { trBusy = false; }
+}
+
 const minutesNow = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
 
 function dayLabel(k) {
@@ -827,6 +920,7 @@ function setStatus(kind) {
 $("#lang-btn").addEventListener("click", () => {
   lang = lang === "zh" ? "en" : "zh";
   try { localStorage.setItem("family-recipes:lang", lang); } catch {}
+  trFailed = false;
   applyStatic();
   render();
 });
@@ -836,14 +930,14 @@ $("#lang-btn").addEventListener("click", () => {
 function loadLocal() {
   try {
     const d = JSON.parse(localStorage.getItem(LOCAL_KEY));
-    if (d) Object.assign(state, { recipes: d.recipes || {}, days: d.days || {}, pantry: d.pantry || [], checked: d.checked || {} });
+    if (d) Object.assign(state, { recipes: d.recipes || {}, days: d.days || {}, pantry: d.pantry || [], checked: d.checked || {}, tr: { zh: {}, en: {}, ...(d.tr || {}) } });
     for (const [id, src] of Object.entries(d?.photos || {})) photoCache.set(id, src);
   } catch {}
 }
 function saveLocal() {
   try {
     localStorage.setItem(LOCAL_KEY, JSON.stringify({
-      recipes: state.recipes, days: state.days, pantry: state.pantry, checked: state.checked, photos: Object.fromEntries(photoCache),
+      recipes: state.recipes, days: state.days, pantry: state.pantry, checked: state.checked, tr: state.tr, photos: Object.fromEntries(photoCache),
     }));
   } catch { toast(T("noSpace")); }
 }
@@ -868,6 +962,7 @@ async function putDoc(col, id, data) {
     if (col === "days") state.days[id] = data;
     if (col === "lists" && id === "pantry") state.pantry = data.items;
     if (col === "lists" && id === "shopping") state.checked = data.checked;
+    if (col === "lists" && id === "translations") state.tr = data;
     if (col === "photos") photoCache.set(id, data.src);
     saveLocal();
     render();
@@ -935,6 +1030,7 @@ async function connect() {
     for (const d of s.docs) {
       if (d.id === "pantry") state.pantry = [...(d.data().items || [])];
       if (d.id === "shopping") state.checked = { ...(d.data().checked || {}) };
+      if (d.id === "translations") state.tr = { zh: { ...(d.data().zh || {}) }, en: { ...(d.data().en || {}) } };
     }
     render();
   }, fail);
@@ -1039,7 +1135,7 @@ function mealCard(k, s) {
     const img = safeImg(r.thumb);
     return `<li><button class="dish" data-open="${esc(r.id)}">
         ${img ? `<img class="mini" src="${img}" alt="">` : `<span class="mini ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
-        <span class="dish-name">${esc(r.name)}</span>${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}
+        <span class="dish-name">${esc(tr(r.name))}</span>${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}
       </button><button class="dish-x" data-unplan="${key}|${esc(r.id)}" aria-label="${esc(T("removeFromMeal"))}">✕</button></li>`;
   }).join("");
   return `<details class="${cls}" data-meal="${key}"${open ? " open" : ""}>${summary}
@@ -1091,7 +1187,7 @@ function renderToday() {
         const inPantry = have.some((p) => key.includes(p));
         const ck = `${k}:${key}`;
         return `<li class="${state.checked[ck] ? "done" : ""}"><label><input type="checkbox" id="prep-${i}" data-prep="${esc(ck)}"${state.checked[ck] ? " checked" : ""}>
-          <span>${esc(it.text)}</span>${inPantry ? `<span class="chip t1">${T("atHomeChip")}</span>` : ""}<span class="from">${[...it.recipes].map(esc).join(sep())}</span></label></li>`;
+          <span>${esc(itemLabel(it))}</span>${inPantry ? `<span class="chip t1">${T("atHomeChip")}</span>` : ""}<span class="from">${[...it.recipes].map((n) => esc(tr(n))).join(sep())}</span></label></li>`;
       }).join("")
     : `<li class="muted">${T("prepEmpty")}</li>`;
 
@@ -1179,15 +1275,18 @@ function gatherIngredients(keys, skipPast = false) {
       if (!slot || slot.done || (skipPast && isPast(k, m))) continue;
       for (const r of slotRecipes(slot)) {
         for (const ing of r.ingredients || []) {
-          const key = norm(ing);
-          const it = items.get(key) || { text: ing, recipes: new Set() };
+          const { name, qty } = parseIngredient(ing);
+          const key = norm(tr(name)); // merge "Eggs" and "鸡蛋" once translated
+          if (!key) continue;
+          const it = items.get(key) || { name, qtys: [], recipes: new Set() };
+          if (qty) it.qtys.push(qty);
           it.recipes.add(r.name);
           items.set(key, it);
         }
       }
     }
   }
-  return [...items.entries()].sort(([a], [b]) => collator.compare(a, b));
+  return [...items.entries()].sort(([, a], [, b]) => collator.compare(tr(a.name), tr(b.name)));
 }
 
 // ================= Recipes & filters =================
@@ -1278,7 +1377,7 @@ function recipeCard(r, cooked, attr = "data-open") {
   return `<button class="rcard" ${attr}="${esc(r.id)}">
     ${img ? `<img class="pic" src="${img}" alt="" loading="lazy">` : `<span class="pic ${colorClass(r.name)}">${esc(recipeEmoji(r))}</span>`}
     <span class="body">
-      <h3>${esc(r.name)}</h3>
+      <h3>${esc(tr(r.name))}</h3>
       <span class="meta">${r.time ? `<span class="time">⏱ ${fmtTime(r.time)}</span>` : ""}${r.servings ? `<span>👪 ${r.servings}</span>` : ""}${c ? `<span>🍽 ×${c.n}</span>` : ""}${(r.journal || []).length ? `<span>📓 ${r.journal.length}</span>` : ""}</span>
     </span>
   </button>`;
@@ -1364,7 +1463,7 @@ let viewingId = null;
 async function renderRecipeView() {
   const r = state.recipes[viewingId];
   if (!r) { $("#view-dialog").close(); return; }
-  $("#v-title").textContent = `${recipeEmoji(r)} ${r.name}`;
+  $("#v-title").textContent = `${recipeEmoji(r)} ${tr(r.name)}`;
   const c = cookedMap()[r.id];
   $("#v-facts").innerHTML = [
     r.time && `<span class="fact">⏱ ${fmtTime(r.time)}</span>`,
@@ -1723,7 +1822,7 @@ function renderFridge() {
         <div class="panel match">
           <span class="score">${Math.round(score * 100)}%</span>
           <span class="info">
-            <b style="font-family:var(--font-display);font-size:1.1rem">${esc(recipeEmoji(r))} ${esc(r.name)}</b>
+            <b style="font-family:var(--font-display);font-size:1.1rem">${esc(recipeEmoji(r))} ${esc(tr(r.name))}</b>
             <span class="hint">${esc(T("uses", usedPantry.join(sep())))} · ${missing.length ? esc(T("stillNeed", missing.slice(0, 4).join(sep()) + (missing.length > 4 ? "…" : ""))) : T("haveAll")}</span>
           </span>
           <span class="toolbar"><button class="small" data-open="${esc(r.id)}">${T("view")}</button><button class="small sun" data-plan="${esc(r.id)}">📅 ${T("plan")}</button></span>
@@ -1823,7 +1922,7 @@ function renderShop() {
   const row = ([key, it], i, pre) => {
     const ck = `shop:${key}`;
     return `<li class="${state.checked[ck] ? "done" : ""}"><label><input type="checkbox" id="${pre}-${i}" data-shop="${esc(ck)}"${state.checked[ck] ? " checked" : ""}>
-      <span>${esc(it.text)}</span><span class="from">${[...it.recipes].map(esc).join(sep())}</span></label></li>`;
+      <span>${esc(itemLabel(it))}</span><span class="from">${[...it.recipes].map((n) => esc(tr(n))).join(sep())}</span></label></li>`;
   };
   $("#shop-list").innerHTML = need.length ? need.map((x, i) => row(x, i, "s")).join("")
     : `<li class="muted">${items.length ? T("allHome") : T("shopEmpty")}</li>`;
@@ -1844,6 +1943,7 @@ function render() {
   if (state.view === "shop") renderShop();
   if ($("#view-dialog").open) renderRecipeView();
   if ($("#pick-dialog").open) renderPicker();
+  if (state.ready) translatePending();
 }
 
 // Keep Today in step with the clock: meals fold away as their time passes, and the date rolls over at midnight.

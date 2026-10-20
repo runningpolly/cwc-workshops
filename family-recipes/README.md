@@ -43,7 +43,8 @@ the page's shared storage, so every device sees the same data.
   replies in the chosen language
 - **Today**: today's meals, or tomorrow's once today's are all done; meals that are
   done or already past fold away by the clock; a start-time timeline, a prep
-  checklist and a shared note for the day, each collapsible
+  checklist (item names only, with counts for countable things) and a shared
+  note for the day, each collapsible
 - **Recipes**: a two-column photo grid or a compact list (one switch, remembered
   per device), a filter panel (tags, cooking time, photo, not cooked
   yet, sort order), tags, cooking time, servings, notes and a dated cooking
