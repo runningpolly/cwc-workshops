@@ -218,6 +218,41 @@ details.meal[open] .meal-sumname { visibility: hidden; }
 .rcard h3 { font-size: 1.2rem; font-weight: 600; }
 .rcard .meta { font-size: 0.85rem; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
 .pic.c0 { background: var(--sun-soft); } .pic.c1 { background: var(--leaf-soft); } .pic.c2 { background: var(--tomato-soft); } .pic.c3 { background: var(--grape-soft); }
+.layout-toggle { flex: none; display: flex; border: 2px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+.layout-toggle button { border: 0; border-radius: 0; box-shadow: none; padding: 8px 12px; font-size: 1.05rem; }
+.layout-toggle button + button { border-left: 2px solid var(--line); }
+.layout-toggle button[aria-pressed="true"] { background: var(--sun); }
+.layout-toggle button:active { transform: none; }
+/* Phones: two cards per row so more dishes fit on screen. */
+@media (max-width: 559px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .cards .rcard { border-radius: 18px; }
+  .cards .rcard .pic { font-size: 48px; }
+  .cards .rcard .body { padding: 8px 10px 10px; gap: 4px; }
+  .cards .rcard h3 { font-size: 0.98rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cards .rcard .meta { font-size: 0.75rem; gap: 6px; }
+  #view-recipes { gap: 12px; }
+  #view-recipes .section-head { flex-wrap: nowrap; }
+  #view-recipes .section-head h2 { display: none; }
+  #view-recipes .section-head .toolbar { gap: 8px; flex-wrap: nowrap; flex: 1; }
+  #view-recipes .section-head .toolbar button { flex: 1; padding: 8px 10px; font-size: 0.9rem; border-radius: 12px; white-space: nowrap; }
+  #view-recipes > .toolbar { flex-wrap: nowrap; gap: 6px; }
+  #view-recipes #search { flex: 1 1 auto; min-width: 0; padding: 8px 10px; }
+  #view-recipes .filter-btn { padding: 8px 10px; flex: none; white-space: nowrap; }
+  .layout-toggle button { padding: 7px 9px; }
+  #recipe-grid.list { gap: 6px; }
+  #recipe-grid.list .rcard { grid-template-columns: 64px minmax(0, 1fr); }
+  #recipe-grid.list .rcard .pic { width: 64px; height: 64px; font-size: 30px; }
+  #recipe-grid.list .rcard .body { padding: 6px 10px; }
+}
+/* Compact list: one short row per dish with a small photo. */
+.cards.list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.cards.list .rcard { grid-template-rows: none; grid-template-columns: 76px minmax(0, 1fr); align-items: center; border-radius: 16px; transform: none; box-shadow: 2px 2px 0 var(--line); }
+.cards.list .rcard .pic { width: 76px; height: 76px; aspect-ratio: auto; border-bottom: 0; border-right: 2px solid var(--line); font-size: 36px; }
+.cards.list .rcard .body { padding: 8px 12px; gap: 2px; }
+.cards.list .rcard h3 { font-size: 1.02rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.cards.list .rcard .meta { font-size: 0.78rem; }
+@media (min-width: 760px) { .cards.list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ---------- Plan ---------- */
 .plan-list { display: grid; gap: 14px; }
@@ -384,6 +419,10 @@ form.sheet label small { font-weight: 600; color: var(--muted); }
     <div class="toolbar">
       <input id="search" type="search" data-tp="searchPlaceholder" aria-label="Search">
       <button class="filter-btn" id="filter-btn" aria-expanded="false" aria-controls="filters">⚙️ <span data-t="filter">Filter</span> <span class="count" id="filter-count" hidden></span></button>
+      <div class="layout-toggle" id="layout-toggle">
+        <button data-layout="grid" data-ta="layoutGrid" aria-label="Photo grid" aria-pressed="true">▦</button>
+        <button data-layout="list" data-ta="layoutList" aria-label="Compact list" aria-pressed="false">☰</button>
+      </div>
     </div>
     <div class="panel filters" id="filters" hidden></div>
     <p class="hint" id="result-count"></p>
@@ -553,7 +592,7 @@ const STR = {
     getReady: "Get ready", toPrepare: "What to prepare", familyNotes: "Notes for the family", familyNotesHint: "Anything everyone should know for this day: defrost the chicken, Grandma's coming, eat early…",
     notePlaceholder: "Write a note for this day", comingUp: "Coming up",
     ourRecipes: "Our recipes", fromPhoto: "From a photo", newRecipe: "New recipe", searchPlaceholder: "Search dishes, ingredients, notes…", search: "Search",
-    filter: "Filter", fTags: "Tags", fTime: "Cooking time", fAny: "Any", fUnder: (m) => `≤ ${m} min`, fOver: "> 60 min", fMore: "Other", fWithPhoto: "With photo", fNeverCooked: "Not cooked yet",
+    filter: "Filter", layoutGrid: "Photo grid", layoutList: "Compact list", fTags: "Tags", fTime: "Cooking time", fAny: "Any", fUnder: (m) => `≤ ${m} min`, fOver: "> 60 min", fMore: "Other", fWithPhoto: "With photo", fNeverCooked: "Not cooked yet",
     fSort: "Sort by", sortAz: "A–Z", sortNew: "Newest", sortQuick: "Quickest", sortCooked: "Most cooked", clearFilters: "Clear filters", showN: (n) => `Show ${n}`,
     resultCount: (n, all) => (n === all ? `${all} recipes` : `${n} of ${all} recipes`),
     mealPlan: "Meal plan", planHint: "Tap a meal to pick or change the dish.",
@@ -597,7 +636,7 @@ const STR = {
     getReady: "准备时间", toPrepare: "需要准备", familyNotes: "家庭留言", familyNotesHint: "大家今天需要知道的事：解冻鸡肉、奶奶要来、早点吃饭……",
     notePlaceholder: "给这一天写个留言", comingUp: "接下来",
     ourRecipes: "我们的菜谱", fromPhoto: "拍照添加", newRecipe: "新菜谱", searchPlaceholder: "搜索菜名、食材、笔记……", search: "搜索",
-    filter: "筛选", fTags: "标签", fTime: "烹饪时间", fAny: "不限", fUnder: (m) => `≤ ${m} 分钟`, fOver: "> 60 分钟", fMore: "其他", fWithPhoto: "有照片", fNeverCooked: "还没做过",
+    filter: "筛选", layoutGrid: "大图模式", layoutList: "列表模式", fTags: "标签", fTime: "烹饪时间", fAny: "不限", fUnder: (m) => `≤ ${m} 分钟`, fOver: "> 60 分钟", fMore: "其他", fWithPhoto: "有照片", fNeverCooked: "还没做过",
     fSort: "排序", sortAz: "按名称", sortNew: "最新", sortQuick: "最快", sortCooked: "做得最多", clearFilters: "清除筛选", showN: (n) => `显示 ${n} 道`,
     resultCount: (n, all) => (n === all ? `共 ${all} 道菜` : `${all} 道菜中的 ${n} 道`),
     mealPlan: "饮食计划", planHint: "点一顿饭来选择或更换菜品。",
@@ -1204,8 +1243,19 @@ function recipeCard(r, cooked, attr = "data-open") {
     </span>
   </button>`;
 }
+// Grid or compact list, remembered on this device.
+let layout = (() => { try { return localStorage.getItem("family-recipes:layout") === "list" ? "list" : "grid"; } catch { return "grid"; } })();
+$("#layout-toggle").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-layout]");
+  if (!b) return;
+  layout = b.dataset.layout;
+  try { localStorage.setItem("family-recipes:layout", layout); } catch {}
+  renderRecipes();
+});
 function renderRecipes() {
   const grid = $("#recipe-grid");
+  grid.classList.toggle("list", layout === "list");
+  document.querySelectorAll("#layout-toggle [data-layout]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.layout === layout)));
   const all = Object.values(state.recipes);
   const q = $("#search").value.trim().toLowerCase();
   const shown = filtered(state.filter, q);
